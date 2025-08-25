@@ -5,12 +5,12 @@
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",
-    "local": "AWS_PROFILE=liberty-lens-dev AWS_DEFAULT_PROFILE=liberty-lens-dev sst dev --stage local",
+    "local": "sst dev --stage local",
     "unit-tests": "vitest --project unit-tests",
     "ui-tests": "vitest --project ui-tests",
     "integration-tests": "vitest --project integration-tests",
     "e2e-tests": "npx playwright test app/e2e.spec.ts",
-    "aws-login": "aws sso login --sso-session=liberty-lens-dev"
+    "aws-login": "aws sso login --profile=liberty-lens-dev"
   },
   "dependencies": {
     "@clerk/react-router": "^1.9.4",
