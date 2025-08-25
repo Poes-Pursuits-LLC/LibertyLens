@@ -1,114 +1,151 @@
-import { useState } from 'react'
-import type { CreateNewsSourceInput, SourceCategory } from '~/core/news-source'
-import { useTestRssFeed } from '~/services/news-source.hooks'
+import { useState } from "react";
+import type { CreateNewsSourceInput, SourceCategory } from "~/core/news-source";
+import { hc } from "hono/client";
+import type { AppType } from "~/server/main";
 
 interface CustomRSSFormProps {
-  onSubmit: (data: CreateNewsSourceInput) => void | Promise<void>
-  onCancel: () => void
-  isSubmitting?: boolean
+  onSubmit: (data: CreateNewsSourceInput) => void | Promise<void>;
+  onCancel: () => void;
+  isSubmitting?: boolean;
 }
 
-export function CustomRSSForm({ onSubmit, onCancel, isSubmitting = false }: CustomRSSFormProps) {
+export function CustomRSSForm({
+  onSubmit,
+  onCancel,
+  isSubmitting = false,
+}: CustomRSSFormProps) {
   const [formData, setFormData] = useState({
-    name: '',
-    url: '',
-    description: '',
-    category: 'alternative' as SourceCategory,
-    tags: ''
-  })
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
-  const [testMessage, setTestMessage] = useState('')
-  const testRssFeed = useTestRssFeed()
+    name: "",
+    url: "",
+    description: "",
+    category: "alternative" as SourceCategory,
+    tags: "",
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [testStatus, setTestStatus] = useState<
+    "idle" | "testing" | "success" | "error"
+  >("idle");
+  const [testMessage, setTestMessage] = useState("");
 
   const validateForm = () => {
-    const newErrors: Record<string, string> = {}
+    const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Feed name is required'
+      newErrors.name = "Feed name is required";
     }
 
     if (!formData.url.trim()) {
-      newErrors.url = 'Feed URL is required'
+      newErrors.url = "Feed URL is required";
     } else {
       try {
-        new URL(formData.url)
+        new URL(formData.url);
       } catch {
-        newErrors.url = 'Please enter a valid URL'
+        newErrors.url = "Please enter a valid URL";
       }
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleTestFeed = async () => {
     if (!formData.url.trim()) {
-      setErrors({ ...errors, url: 'Please enter a URL to test' })
-      return
+      setErrors({ ...errors, url: "Please enter a URL to test" });
+      return;
     }
 
     try {
-      new URL(formData.url)
+      new URL(formData.url);
     } catch {
-      setErrors({ ...errors, url: 'Please enter a valid URL' })
-      return
+      setErrors({ ...errors, url: "Please enter a valid URL" });
+      return;
     }
 
-    setTestStatus('testing')
-    setTestMessage('Testing feed...')
+    setTestStatus("testing");
+    setTestMessage("Testing feed...");
 
     try {
-      const result = await testRssFeed.mutateAsync(formData.url)
-      
+      const SERVER_URL = import.meta.env.SERVER_URL || "";
+      const client = hc<AppType>(SERVER_URL);
+
+      const response = await client.sources.test.$post({
+        json: { url: formData.url },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMessage =
+          typeof errorData === "object" && errorData && "error" in errorData
+            ? (errorData as any).error
+            : "Failed to test RSS feed";
+        setTestStatus("error");
+        setTestMessage(errorMessage);
+        return;
+      }
+
+      const data = await response.json();
+      const result = {
+        isValid: data.isValid || false,
+        message: data.message,
+        feedInfo: data.feedInfo,
+      };
+
       if (result.isValid) {
-        setTestStatus('success')
-        setTestMessage(`Feed is valid! Found ${result.feedInfo?.itemCount || 0} items`)
-        
+        setTestStatus("success");
+        setTestMessage(
+          `Feed is valid! Found ${result.feedInfo?.itemCount || 0} items`
+        );
+
         // Auto-fill name and description if empty
         if (!formData.name && result.feedInfo?.title) {
-          setFormData(prev => ({ ...prev, name: result.feedInfo!.title }))
+          setFormData((prev) => ({ ...prev, name: result.feedInfo!.title }));
         }
         if (!formData.description && result.feedInfo?.description) {
-          setFormData(prev => ({ ...prev, description: result.feedInfo!.description }))
+          setFormData((prev) => ({
+            ...prev,
+            description: result.feedInfo!.description ?? "",
+          }));
         }
       } else {
-        setTestStatus('error')
-        setTestMessage(result.message || 'Failed to validate feed')
+        setTestStatus("error");
+        setTestMessage(result.message || "Failed to validate feed");
       }
     } catch (error) {
-      setTestStatus('error')
-      setTestMessage('Failed to validate feed. Please check the URL.')
+      setTestStatus("error");
+      setTestMessage("Failed to validate feed. Please check the URL.");
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!validateForm()) {
-      return
+      return;
     }
 
     const tags = formData.tags
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag.length > 0)
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0);
 
     await onSubmit({
       name: formData.name.trim(),
       url: formData.url.trim(),
       description: formData.description.trim() || undefined,
-      type: 'rss',
+      type: "rss",
       category: formData.category,
-      tags: tags.length > 0 ? tags : undefined
-    })
-  }
+      tags: tags.length > 0 ? tags : undefined,
+    });
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Name */}
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="name"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Feed Name
         </label>
         <input
@@ -118,7 +155,7 @@ export function CustomRSSForm({ onSubmit, onCancel, isSubmitting = false }: Cust
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           maxLength={100}
           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            errors.name ? 'border-red-300' : 'border-gray-300'
+            errors.name ? "border-red-300" : "border-gray-300"
           }`}
         />
         {errors.name && (
@@ -128,7 +165,10 @@ export function CustomRSSForm({ onSubmit, onCancel, isSubmitting = false }: Cust
 
       {/* URL */}
       <div>
-        <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="url"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Feed URL
         </label>
         <div className="flex gap-2">
@@ -137,32 +177,36 @@ export function CustomRSSForm({ onSubmit, onCancel, isSubmitting = false }: Cust
             type="text"
             value={formData.url}
             onChange={(e) => {
-              setFormData({ ...formData, url: e.target.value })
-              setTestStatus('idle')
+              setFormData({ ...formData, url: e.target.value });
+              setTestStatus("idle");
             }}
             placeholder="https://example.com/feed.xml"
             className={`flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.url ? 'border-red-300' : 'border-gray-300'
+              errors.url ? "border-red-300" : "border-gray-300"
             }`}
           />
           <button
             type="button"
             onClick={handleTestFeed}
-            disabled={testStatus === 'testing'}
+            disabled={testStatus === "testing"}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:opacity-50"
           >
-            {testStatus === 'testing' ? 'Testing...' : 'Test Feed'}
+            {testStatus === "testing" ? "Testing..." : "Test Feed"}
           </button>
         </div>
         {errors.url && (
           <p className="mt-1 text-sm text-red-600">{errors.url}</p>
         )}
-        {testStatus !== 'idle' && (
-          <p className={`mt-1 text-sm ${
-            testStatus === 'success' ? 'text-green-600' : 
-            testStatus === 'error' ? 'text-red-600' : 
-            'text-gray-600'
-          }`}>
+        {testStatus !== "idle" && (
+          <p
+            className={`mt-1 text-sm ${
+              testStatus === "success"
+                ? "text-green-600"
+                : testStatus === "error"
+                  ? "text-red-600"
+                  : "text-gray-600"
+            }`}
+          >
             {testMessage}
           </p>
         )}
@@ -170,13 +214,18 @@ export function CustomRSSForm({ onSubmit, onCancel, isSubmitting = false }: Cust
 
       {/* Description */}
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="description"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Description
         </label>
         <textarea
           id="description"
           value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, description: e.target.value })
+          }
           maxLength={500}
           rows={3}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -185,13 +234,21 @@ export function CustomRSSForm({ onSubmit, onCancel, isSubmitting = false }: Cust
 
       {/* Category */}
       <div>
-        <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="category"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Category
         </label>
         <select
           id="category"
           value={formData.category}
-          onChange={(e) => setFormData({ ...formData, category: e.target.value as SourceCategory })}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              category: e.target.value as SourceCategory,
+            })
+          }
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="alternative">Alternative</option>
@@ -205,7 +262,10 @@ export function CustomRSSForm({ onSubmit, onCancel, isSubmitting = false }: Cust
 
       {/* Tags */}
       <div>
-        <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="tags"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Tags
         </label>
         <input
@@ -226,7 +286,7 @@ export function CustomRSSForm({ onSubmit, onCancel, isSubmitting = false }: Cust
           disabled={isSubmitting}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
         >
-          {isSubmitting ? 'Adding...' : 'Add Feed'}
+          {isSubmitting ? "Adding..." : "Add Feed"}
         </button>
         <button
           type="button"
@@ -238,5 +298,5 @@ export function CustomRSSForm({ onSubmit, onCancel, isSubmitting = false }: Cust
         </button>
       </div>
     </form>
-  )
+  );
 }

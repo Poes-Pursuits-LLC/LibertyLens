@@ -6,7 +6,6 @@ import {
   SparklesIcon,
   CogIcon,
   UserCircleIcon,
-  ChartBarIcon,
 } from "@heroicons/react/24/outline";
 import {
   HomeIcon as HomeSolidIcon,
@@ -59,9 +58,7 @@ export default function DashboardLayout() {
         {/* Sidebar component */}
         <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-gray-200 bg-white px-6 pb-4">
           <div className="flex h-16 shrink-0 items-center">
-            <h1 className="text-2xl font-bold text-blue-600">
-              Liberty Lens
-            </h1>
+            <h1 className="text-2xl font-bold text-blue-600">Liberty Lens</h1>
           </div>
           <nav className="flex flex-1 flex-col">
             <ul role="list" className="flex flex-1 flex-col gap-y-7">
@@ -111,9 +108,7 @@ export default function DashboardLayout() {
 
       {/* Mobile header */}
       <div className="sticky top-0 z-40 flex items-center gap-x-6 bg-white px-4 py-4 shadow-sm sm:px-6 lg:hidden">
-        <h1 className="text-xl font-bold text-blue-600">
-          Liberty Lens
-        </h1>
+        <h1 className="text-xl font-bold text-blue-600">Liberty Lens</h1>
       </div>
 
       {/* Mobile bottom navigation */}
@@ -132,9 +127,7 @@ export default function DashboardLayout() {
                 to={item.href}
                 className={({ isActive }) =>
                   `flex flex-col items-center gap-1 px-2 py-2 text-xs ${
-                    isActive
-                      ? "text-blue-600"
-                      : "text-gray-600"
+                    isActive ? "text-blue-600" : "text-gray-600"
                   }`
                 }
               >

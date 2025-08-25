@@ -1,25 +1,27 @@
 import type { Route } from "./+types/index";
 import { useState } from "react";
-import { 
+import {
   SparklesIcon,
   LinkIcon,
   DocumentTextIcon,
   ArrowPathIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  LightBulbIcon
+  LightBulbIcon,
 } from "@heroicons/react/24/outline";
-import { Card } from "~/components/ui/Card";
-import { Button } from "~/components/ui/Button";
+import { Card } from "~/components/ui/card";
+import { Button } from "~/components/ui/button";
 
 export function meta({}: Route.MetaArgs) {
   return [
     { title: "Analyze Article - Liberty Lens" },
-    { name: "description", content: "Get AI-powered libertarian analysis of any news article" },
+    {
+      name: "description",
+      content: "Get AI-powered libertarian analysis of any news article",
+    },
   ];
 }
 
-// Mock analysis result
 const mockAnalysis = {
   title: "Federal Reserve Raises Interest Rates by 0.25%",
   source: "Wall Street Journal",
@@ -27,7 +29,8 @@ const mockAnalysis = {
   publishedDate: "March 15, 2024",
   url: "https://wsj.com/example-article",
   libertarianScore: 25,
-  summary: "The Federal Reserve announced another quarter-point interest rate increase, citing persistent inflation concerns and labor market strength.",
+  summary:
+    "The Federal Reserve announced another quarter-point interest rate increase, citing persistent inflation concerns and labor market strength.",
   keyPoints: [
     "Central planning of interest rates distorts market signals",
     "Artificial rate manipulation creates boom-bust cycles",
@@ -38,17 +41,20 @@ const mockAnalysis = {
     {
       name: "Free Markets",
       relevance: "high",
-      explanation: "Interest rates should be determined by supply and demand for capital, not central committees",
+      explanation:
+        "Interest rates should be determined by supply and demand for capital, not central committees",
     },
     {
       name: "Sound Money",
-      relevance: "high", 
-      explanation: "Monetary manipulation erodes purchasing power and enables government deficit spending",
+      relevance: "high",
+      explanation:
+        "Monetary manipulation erodes purchasing power and enables government deficit spending",
     },
     {
       name: "Limited Government",
       relevance: "medium",
-      explanation: "Federal Reserve represents massive government intervention in the economy",
+      explanation:
+        "Federal Reserve represents massive government intervention in the economy",
     },
   ],
   analysis: `This Federal Reserve decision exemplifies the fundamental problems with central economic planning. By artificially manipulating interest rates, the Fed distorts the most important price signal in the economy - the price of money itself.
@@ -76,7 +82,7 @@ export default function AnalyzeIndex() {
     e.preventDefault();
     setError("");
     setIsAnalyzing(true);
-    
+
     // Simulate API call
     setTimeout(() => {
       setAnalysis(mockAnalysis);
@@ -108,7 +114,10 @@ export default function AnalyzeIndex() {
           <Card className="p-6">
             <form onSubmit={handleAnalyze} className="space-y-4">
               <div>
-                <label htmlFor="articleUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label
+                  htmlFor="articleUrl"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
                   Article URL
                 </label>
                 <div className="relative">
@@ -124,19 +133,15 @@ export default function AnalyzeIndex() {
                   />
                 </div>
               </div>
-              
+
               {error && (
                 <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
                   <ExclamationTriangleIcon className="h-5 w-5" />
                   <p className="text-sm">{error}</p>
                 </div>
               )}
-              
-              <Button 
-                type="submit" 
-                className="w-full"
-                disabled={isAnalyzing}
-              >
+
+              <Button type="submit" className="w-full" disabled={isAnalyzing}>
                 {isAnalyzing ? (
                   <>
                     <ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />
@@ -163,33 +168,41 @@ export default function AnalyzeIndex() {
                   1
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-900 dark:text-white">Paste Article URL</h3>
+                  <h3 className="font-medium text-gray-900 dark:text-white">
+                    Paste Article URL
+                  </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Enter the URL of any news article you want analyzed
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex gap-4">
                 <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 font-semibold">
                   2
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-900 dark:text-white">AI Analysis</h3>
+                  <h3 className="font-medium text-gray-900 dark:text-white">
+                    AI Analysis
+                  </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Our AI reads the article and analyzes it through libertarian principles
+                    Our AI reads the article and analyzes it through libertarian
+                    principles
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex gap-4">
                 <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 font-semibold">
                   3
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-900 dark:text-white">Get Insights</h3>
+                  <h3 className="font-medium text-gray-900 dark:text-white">
+                    Get Insights
+                  </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Receive comprehensive libertarian perspective with key principles and alternatives
+                    Receive comprehensive libertarian perspective with key
+                    principles and alternatives
                   </p>
                 </div>
               </div>
@@ -203,20 +216,46 @@ export default function AnalyzeIndex() {
             </h2>
             <div className="space-y-3">
               {[
-                { title: "New Cryptocurrency Regulations Proposed", source: "Reuters", score: 15, time: "2 hours ago" },
-                { title: "State Reduces Occupational Licensing Requirements", source: "Local News", score: 85, time: "5 hours ago" },
-                { title: "Congress Debates Military Budget Increase", source: "AP News", score: 20, time: "1 day ago" },
+                {
+                  title: "New Cryptocurrency Regulations Proposed",
+                  source: "Reuters",
+                  score: 15,
+                  time: "2 hours ago",
+                },
+                {
+                  title: "State Reduces Occupational Licensing Requirements",
+                  source: "Local News",
+                  score: 85,
+                  time: "5 hours ago",
+                },
+                {
+                  title: "Congress Debates Military Budget Increase",
+                  source: "AP News",
+                  score: 20,
+                  time: "1 day ago",
+                },
               ].map((item, index) => (
-                <div key={index} className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                <div
+                  key={index}
+                  className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-0"
+                >
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">{item.title}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{item.source} • {item.time}</p>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {item.title}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {item.source} • {item.time}
+                    </p>
                   </div>
-                  <div className={`text-lg font-bold ${
-                    item.score >= 70 ? 'text-green-600' : 
-                    item.score >= 40 ? 'text-yellow-600' : 
-                    'text-red-600'
-                  }`}>
+                  <div
+                    className={`text-lg font-bold ${
+                      item.score >= 70
+                        ? "text-green-600"
+                        : item.score >= 40
+                          ? "text-yellow-600"
+                          : "text-red-600"
+                    }`}
+                  >
                     {item.score}
                   </div>
                 </div>
@@ -242,14 +281,20 @@ export default function AnalyzeIndex() {
                 </div>
               </div>
               <div className="text-center">
-                <div className={`text-3xl font-bold ${
-                  analysis.libertarianScore >= 70 ? 'text-green-600' : 
-                  analysis.libertarianScore >= 40 ? 'text-yellow-600' : 
-                  'text-red-600'
-                }`}>
+                <div
+                  className={`text-3xl font-bold ${
+                    analysis.libertarianScore >= 70
+                      ? "text-green-600"
+                      : analysis.libertarianScore >= 40
+                        ? "text-yellow-600"
+                        : "text-red-600"
+                  }`}
+                >
                   {analysis.libertarianScore}
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Liberty Score</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  Liberty Score
+                </div>
               </div>
             </div>
 
@@ -258,7 +303,9 @@ export default function AnalyzeIndex() {
                 <DocumentTextIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 Summary
               </h3>
-              <p className="text-gray-700 dark:text-gray-300">{analysis.summary}</p>
+              <p className="text-gray-700 dark:text-gray-300">
+                {analysis.summary}
+              </p>
 
               <h3 className="text-lg font-semibold flex items-center gap-2 mt-6">
                 <LightBulbIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -268,26 +315,41 @@ export default function AnalyzeIndex() {
                 {analysis.keyPoints.map((point, index) => (
                   <li key={index} className="flex items-start gap-2">
                     <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700 dark:text-gray-300">{point}</span>
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {point}
+                    </span>
                   </li>
                 ))}
               </ul>
 
-              <h3 className="text-lg font-semibold mt-6">Relevant Principles</h3>
+              <h3 className="text-lg font-semibold mt-6">
+                Relevant Principles
+              </h3>
               <div className="space-y-4">
                 {analysis.principles.map((principle, index) => (
-                  <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                  <div
+                    key={index}
+                    className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4"
+                  >
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-gray-900 dark:text-white">{principle.name}</h4>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        principle.relevance === 'high' ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' :
-                        principle.relevance === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300' :
-                        'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                      }`}>
+                      <h4 className="font-medium text-gray-900 dark:text-white">
+                        {principle.name}
+                      </h4>
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full ${
+                          principle.relevance === "high"
+                            ? "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300"
+                            : principle.relevance === "medium"
+                              ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300"
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                        }`}
+                      >
                         {principle.relevance} relevance
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{principle.explanation}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {principle.explanation}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -297,19 +359,23 @@ export default function AnalyzeIndex() {
                 {analysis.analysis}
               </div>
 
-              <h3 className="text-lg font-semibold mt-6">Libertarian Alternatives</h3>
+              <h3 className="text-lg font-semibold mt-6">
+                Libertarian Alternatives
+              </h3>
               <ul className="space-y-2">
                 {analysis.alternatives.map((alt, index) => (
                   <li key={index} className="flex items-start gap-2">
                     <span className="text-blue-600 dark:text-blue-400">→</span>
-                    <span className="text-gray-700 dark:text-gray-300">{alt}</span>
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {alt}
+                    </span>
                   </li>
                 ))}
               </ul>
             </div>
 
             <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <a 
+              <a
                 href={analysis.url}
                 target="_blank"
                 rel="noopener noreferrer"

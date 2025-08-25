@@ -5,9 +5,34 @@
 
 declare module "sst" {
   export interface Resource {
-    "MyWeb": {
+    "ClerkPublishableKey": {
+      "type": "sst.sst.Secret"
+      "value": string
+    }
+    "ClerkSecretKey": {
+      "type": "sst.sst.Secret"
+      "value": string
+    }
+    "Environment": {
+      "type": "sst.sst.Secret"
+      "value": string
+    }
+    "Server": {
+      "name": string
+      "type": "sst.aws.Function"
+      "url": string
+    }
+    "Table": {
+      "name": string
+      "type": "sst.aws.Dynamo"
+    }
+    "Web": {
       "type": "sst.aws.React"
       "url": string
+    }
+    "WebUrl": {
+      "type": "sst.sst.Secret"
+      "value": string
     }
   }
 }

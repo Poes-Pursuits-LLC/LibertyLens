@@ -6,11 +6,15 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { rootAuthLoader } from "@clerk/react-router/ssr.server";
+import { ClerkProvider } from "@clerk/react-router";
+
+export async function loader(args: Route.LoaderArgs) {
+  return rootAuthLoader(args);
+}
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -43,20 +47,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function App() {
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 60 * 1000, // 1 minute
-        retry: 1,
-      },
-    },
-  }));
-
+export default function App({ loaderData }: Route.ComponentProps) {
   return (
-    <QueryClientProvider client={queryClient}>
+    <ClerkProvider loaderData={loaderData}>
       <Outlet />
-    </QueryClientProvider>
+    </ClerkProvider>
   );
 }
 
