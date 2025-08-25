@@ -7,8 +7,31 @@ import { Link } from "react-router";
 export function LandingPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Navigation Bar */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Liberty Lens</h1>
+            </div>
+            <div className="flex items-center gap-4">
+              <Link to="/login">
+                <Button variant="ghost" size="sm">
+                  Sign In
+                </Button>
+              </Link>
+              <Link to="/login">
+                <Button size="sm">
+                  Get Started
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
       {/* Hero Section with Capitol Background */}
-      <div className="relative">
+      <div className="relative pt-16">
         <div className="absolute inset-0 z-0">
           <img
             src="https://images.unsplash.com/photo-1555992643-a97955e6aae2?w=1920&h=600&fit=crop&crop=focalpoint&fp-y=.4"
@@ -30,8 +53,8 @@ export function LandingPage() {
           subtitle="Tired of statist propaganda disguised as news? Get AI-powered analysis through a principled libertarian lens."
           className="relative z-10"
         >
-          <Link to="/dashboard">
-            <Button size="lg">Go to Dashboard</Button>
+          <Link to="/login">
+            <Button size="lg">Get Started</Button>
           </Link>
           <Button variant="secondary" size="lg">
             See How It Works
@@ -336,16 +359,20 @@ export function LandingPage() {
             right authoritarianism.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" variant="secondary">
-              Start Free 14-Day Trial
-            </Button>
-            <Button
-              size="lg"
-              variant="ghost"
-              className="text-white hover:bg-blue-700"
-            >
-              No Credit Card Required
-            </Button>
+            <Link to="/login">
+              <Button size="lg" variant="secondary">
+                Start Free 14-Day Trial
+              </Button>
+            </Link>
+            <Link to="/login">
+              <Button
+                size="lg"
+                variant="ghost"
+                className="text-white hover:bg-blue-700"
+              >
+                Sign In
+              </Button>
+            </Link>
           </div>
           <p className="text-sm text-blue-100 mt-6">
             Cancel anytime. We respect your freedom to choose.

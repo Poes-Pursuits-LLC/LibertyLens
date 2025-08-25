@@ -17,6 +17,24 @@ export default $config({
     };
   },
   async run() {
-    new sst.aws.React("MyWeb");
+    const secret = {
+      WebUrl: new sst.Secret("WebUrl"),
+      ServerUrl: new sst.Secret("ServerUrl"),
+      ClerkSecretKey: new sst.Secret("ClerkSecretKey"),
+      // CLERK_SECRET_KEY=sk_test_rAfEsnuTm7wxqykNAWl7f0czrNbzpjQGU1ZrBNhnQq
+      ClerkPublishableKey: new sst.Secret("ClerkPublishableKey"),
+      // VITE_CLERK_PUBLISHABLE_KEY=pk_test_b3JnYW5pYy1zcXVpZC0xMi5jbGVyay5hY2NvdW50cy5kZXYk
+      Environment: new sst.Secret("Environment"),
+    };
+
+    new sst.aws.React("MyWeb", {
+      environment: {
+        ENVIRONMENT: secret.Environment.value,
+        SERVER_URL: secret.ServerUrl.value,
+        VITE_WEB_URL: secret.WebUrl.value,
+        VITE_CLERK_PUBLISHABLE_KEY: secret.ClerkPublishableKey.value,
+        CLERK_SECRET_KEY: secret.ClerkSecretKey.value,
+      },
+    });
   },
 });
