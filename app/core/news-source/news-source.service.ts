@@ -1,0 +1,270 @@
+import { getTTL, handleAsync } from '../utils'
+import { DynamoCache } from '../cache/cache.dynamo'
+import { DynamoNewsSource } from './news-source.dynamo'
+import type { NewsSource, CreateNewsSourceInput, UpdateNewsSourceInput, SourceCategory } from './news-source.model'
+import { defaultNewsSources } from './news-source.model'
+
+const getNewsSourceById = async (sourceId: string): Promise<NewsSource | null> => {
+    const cacheKey = `news-source:${sourceId}`
+    const { data: cached } = await DynamoCache().get({ cacheKey }).go()
+    if (cached?.cached) return cached.cached as NewsSource
+
+    const { data: source } = await DynamoNewsSource()
+        .get({ sourceId, entityType: 'news-source' })
+        .go()
+
+    if (source) {
+        await DynamoCache()
+            .put({
+                cacheKey,
+                cached: source,
+                expireAt: getTTL(24), // Cache for 24 hours
+            })
+            .go()
+    }
+
+    return source || null
+}
+
+const getPublicNewsSources = async (category?: SourceCategory) => {
+    const cacheKey = `public-sources:${category || 'all'}`
+    const { data: cached } = await DynamoCache().get({ cacheKey }).go()
+    if (cached?.cached) return cached.cached as NewsSource[]
+
+    let sources: NewsSource[]
+
+    if (category) {
+        const { data } = await DynamoNewsSource()
+            .query.byCategory({ category })
+            .go()
+        sources = data.filter(s => s.isPublic)
+    } else {
+        const { data } = await DynamoNewsSource()
+            .query.publicSources({ isPublic: true })
+            .go()
+        sources = data
+    }
+
+    await DynamoCache()
+        .put({
+            cacheKey,
+            cached: sources,
+            expireAt: getTTL(6), // Cache for 6 hours
+        })
+        .go()
+
+    return sources
+}
+
+const getUserNewsSources = async (userId: string) => {
+    const cacheKey = `user-sources:${userId}`
+    const { data: cached } = await DynamoCache().get({ cacheKey }).go()
+    if (cached?.cached) return cached.cached as NewsSource[]
+
+    const { data: sources } = await DynamoNewsSource()
+        .query.byUser({ addedByUserId: userId })
+        .go()
+
+    await DynamoCache()
+        .put({
+            cacheKey,
+            cached: sources,
+            expireAt: getTTL(1), // Cache for 1 hour
+        })
+        .go()
+
+    return sources
+}
+
+const createNewsSource = async (input: CreateNewsSourceInput & { userId?: string }) => {
+    const newsSourceData = {
+        name: input.name,
+        description: input.description,
+        url: input.url,
+        type: input.type,
+        category: input.category,
+        logoUrl: input.logoUrl,
+        fetchConfig: input.fetchConfig,
+        tags: input.tags || [],
+        addedByUserId: input.userId,
+        isPublic: !input.userId, // Public if no user ID provided
+    }
+
+    const [source, error] = await handleAsync(
+        DynamoNewsSource()
+            .put(newsSourceData)
+            .go(),
+    )
+
+    if (source?.data) {
+        // Clear relevant caches
+        await Promise.all([
+            DynamoCache().delete({ cacheKey: `public-sources:all` }).go(),
+            DynamoCache().delete({ cacheKey: `public-sources:${input.category}` }).go(),
+            input.userId && DynamoCache().delete({ cacheKey: `user-sources:${input.userId}` }).go(),
+        ].filter(Boolean))
+    }
+
+    return [source?.data || null, error]
+}
+
+const updateNewsSource = async (
+    sourceId: string,
+    updates: UpdateNewsSourceInput,
+    userId?: string,
+) => {
+    // Verify ownership if userId provided
+    if (userId) {
+        const existing = await getNewsSourceById(sourceId)
+        if (!existing || (existing.addedByUserId && existing.addedByUserId !== userId)) {
+            return [null, new Error('Source not found or unauthorized')]
+        }
+    }
+
+    // Clear caches
+    await Promise.all([
+        DynamoCache().delete({ cacheKey: `news-source:${sourceId}` }).go(),
+        DynamoCache().delete({ cacheKey: `public-sources:all` }).go(),
+        userId && DynamoCache().delete({ cacheKey: `user-sources:${userId}` }).go(),
+    ].filter(Boolean))
+
+    const [source, error] = await handleAsync(
+        DynamoNewsSource()
+            .update({ sourceId, entityType: 'news-source' })
+            .set(updates)
+            .go({ response: 'all_new' }),
+    )
+
+    return [source?.data || null, error]
+}
+
+const markFetchSuccess = async (sourceId: string) => {
+    await DynamoCache().delete({ cacheKey: `news-source:${sourceId}` }).go()
+
+    const [source] = await handleAsync(
+        DynamoNewsSource()
+            .update({ sourceId, entityType: 'news-source' })
+            .set({
+                reliability: {
+                    lastSuccessfulFetch: new Date().toISOString(),
+                    failureCount: 0,
+                    score: 100,
+                },
+            })
+            .go({ response: 'all_new' }),
+    )
+
+    return source?.data || null
+}
+
+const markFetchFailure = async (sourceId: string, error: string) => {
+    await DynamoCache().delete({ cacheKey: `news-source:${sourceId}` }).go()
+
+    // Get current source to update failure count
+    const current = await getNewsSourceById(sourceId)
+    if (!current) return null
+
+    const newFailureCount = (current.reliability.failureCount || 0) + 1
+    const newScore = Math.max(0, 100 - (newFailureCount * 10)) // Decrease score by 10 per failure
+
+    const [source] = await handleAsync(
+        DynamoNewsSource()
+            .update({ sourceId, entityType: 'news-source' })
+            .set({
+                reliability: {
+                    ...current.reliability,
+                    lastFailedFetch: new Date().toISOString(),
+                    failureCount: newFailureCount,
+                    score: newScore,
+                },
+            })
+            .go({ response: 'all_new' }),
+    )
+
+    // Deactivate source if score drops too low
+    if (newScore <= 30) {
+        await updateNewsSource(sourceId, { isActive: false })
+    }
+
+    return source?.data || null
+}
+
+const getActiveSourcesForFetching = async (limit = 50) => {
+    const { data } = await DynamoNewsSource()
+        .query.activeSources({ isActive: true })
+        .limit(limit)
+        .go()
+
+    // Filter by reliability score
+    return data.filter(s => s.reliability.score >= 50)
+}
+
+const initializeDefaultSources = async () => {
+    const existingPublicSources = await getPublicNewsSources()
+    const existingNames = new Set(existingPublicSources.map(s => s.name))
+
+    const sourcesToCreate = defaultNewsSources.filter(
+        source => !existingNames.has(source.name!)
+    )
+
+    if (sourcesToCreate.length === 0) {
+        return { created: 0, message: 'All default sources already exist' }
+    }
+
+    const createPromises = sourcesToCreate.map(source =>
+        createNewsSource({
+            name: source.name!,
+            description: source.description,
+            url: source.url!,
+            type: source.type!,
+            category: source.category!,
+            tags: source.tags,
+        })
+    )
+
+    const results = await Promise.all(createPromises)
+    const successCount = results.filter(([data]) => data !== null).length
+
+    return {
+        created: successCount,
+        message: `Created ${successCount} out of ${sourcesToCreate.length} default sources`,
+    }
+}
+
+const deleteNewsSource = async (sourceId: string, userId?: string) => {
+    // Verify ownership if userId provided
+    if (userId) {
+        const existing = await getNewsSourceById(sourceId)
+        if (!existing || (existing.addedByUserId && existing.addedByUserId !== userId)) {
+            return [null, new Error('Source not found or unauthorized')]
+        }
+    }
+
+    // Clear caches
+    await Promise.all([
+        DynamoCache().delete({ cacheKey: `news-source:${sourceId}` }).go(),
+        DynamoCache().delete({ cacheKey: `public-sources:all` }).go(),
+        userId && DynamoCache().delete({ cacheKey: `user-sources:${userId}` }).go(),
+    ].filter(Boolean))
+
+    const [result, error] = await handleAsync(
+        DynamoNewsSource()
+            .delete({ sourceId, entityType: 'news-source' })
+            .go(),
+    )
+
+    return [result?.data || null, error]
+}
+
+export const newsSourceService = {
+    getNewsSourceById,
+    getPublicNewsSources,
+    getUserNewsSources,
+    createNewsSource,
+    updateNewsSource,
+    markFetchSuccess,
+    markFetchFailure,
+    getActiveSourcesForFetching,
+    initializeDefaultSources,
+    deleteNewsSource,
+}

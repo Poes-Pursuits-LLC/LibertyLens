@@ -5,16 +5,34 @@
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",
-    "start": "react-router-serve ./build/server/index.js",
-    "typecheck": "react-router typegen && tsc"
+    "local": "AWS_PROFILE=liberty-lens-dev AWS_DEFAULT_PROFILE=liberty-lens-dev sst dev --stage local",
+    "unit-tests": "vitest --project unit-tests",
+    "ui-tests": "vitest --project ui-tests",
+    "integration-tests": "vitest --project integration-tests",
+    "e2e-tests": "npx playwright test app/e2e.spec.ts",
+    "aws-login": "aws sso login --sso-session=liberty-lens-dev"
   },
   "dependencies": {
+    "@clerk/react-router": "^1.9.4",
+    "@heroicons/react": "^2.2.0",
+    "@hono/node-server": "^1.19.0",
+    "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-separator": "^1.1.7",
+    "@radix-ui/react-slot": "^1.2.3",
     "@react-router/node": "^7.7.1",
     "@react-router/serve": "^7.7.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "hono": "^4.9.4",
     "isbot": "^5.1.27",
+    "lucide-react": "^0.541.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router": "^7.7.1"
+    "react-router": "^7.7.1",
+    "sst": "3.17.10",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@react-router/dev": "^7.7.1",
@@ -22,6 +40,7 @@
     "@types/node": "^20",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
+    "sst": "^3.17.10",
     "tailwindcss": "^4.1.4",
     "typescript": "^5.8.3",
     "vite": "^6.3.3",
