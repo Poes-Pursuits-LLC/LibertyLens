@@ -14,9 +14,11 @@
     "fetch-now": "npx sst shell 'node -e \"import(\\\"./app/workers/fetch-news.handler.js\\\").then(m => m.handler({}).then(console.log))\"'"
   },
   "dependencies": {
+    "@clerk/backend": "^2.9.4",
     "@clerk/react-router": "^1.9.4",
     "@heroicons/react": "^2.2.0",
     "@hono/node-server": "^1.19.0",
+    "@hono/zod-validator": "^0.7.2",
     "@radix-ui/react-icons": "^1.3.2",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-separator": "^1.1.7",

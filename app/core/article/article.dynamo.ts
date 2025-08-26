@@ -96,16 +96,6 @@ export const DynamoArticle = () => {
           pk: { field: "gsi1pk", composite: ["sourceId"] },
           sk: { field: "gsi1sk", composite: ["publishedAt"] },
         },
-        byPublishedDate: {
-          index: "byPublishedDate",
-          pk: { field: "gsi1pk", composite: ["type"] },
-          sk: { field: "gsi1sk", composite: ["publishedAt"] },
-        },
-        byUrl: {
-          index: "byUrl",
-          pk: { field: "gsi1pk", composite: ["originalUrl"] },
-          sk: { field: "gsi1sk", composite: ["articleId"] },
-        },
       },
     },
     {

@@ -45,7 +45,7 @@ const getArticleByUrl = async (
   originalUrl: string
 ): Promise<Article | null> => {
   try {
-    const result = await DynamoArticle().query.byUrl({ originalUrl }).go();
+    const result = await DynamoArticle().find({ originalUrl }).go();
 
     return (result.data?.[0] as Article) || null;
   } catch (error) {
@@ -192,7 +192,7 @@ const getRecentArticles = async (
     ).toISOString();
 
     const result = await DynamoArticle()
-      .query.byPublishedDate({ type: "article" })
+      .find({ type: "article" })
       .where((attr, op) => op.gte(attr.publishedAt, startDate))
       .go({
         limit,
@@ -229,7 +229,7 @@ const searchArticles = async (
     }
 
     const result = await DynamoArticle()
-      .query.byPublishedDate({ type: "article" })
+      .find({ type: "article" })
       .where((attr, op) => {
         if (startDate && endDate) {
           return op.between(attr.publishedAt, startDate, endDate);

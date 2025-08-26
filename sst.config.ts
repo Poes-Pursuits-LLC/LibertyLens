@@ -44,10 +44,11 @@ export default $config({
       url: true,
       handler: "app/server/index.handler",
       link: [...Object.values(secret), table],
+      timeout: "30 seconds",
     });
 
     new sst.aws.Cron("FetchNewsCron", {
-      schedule: "rate(1 day)",
+      schedule: "rate(5 minutes)",
       job: {
         handler: "app/functions/fetch-news.handler",
         link: [...Object.values(secret), table],

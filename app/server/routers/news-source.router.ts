@@ -1,9 +1,10 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { zValidator } from "@hono/zod-validator";
 import Parser from "rss-parser";
-import type { SourceCategory } from "~/core/news-source/news-source.model";
 import { newsSourceService } from "~/core/news-source/news-source.service";
 import { handleAsync } from "~/core";
+import { HTTPException } from "hono/http-exception";
 
 const createNewsSourceSchema = z.object({
   name: z.string().min(1).max(100),
@@ -64,6 +65,34 @@ const testRssSchema = z.object({
   url: z.string().url(),
 });
 
+// Query validation schema for routes with userId and optional category
+const getNewsSourcesQuerySchema = z.object({
+  userId: z.string().min(1),
+  category: z
+    .enum([
+      "mainstream",
+      "alternative",
+      "libertarian",
+      "financial",
+      "tech",
+      "international",
+    ])
+    .optional()
+    .nullable()
+    .transform((val) => (val === null ? undefined : val)),
+});
+
+// Query validation schema for routes with userId and sourceId
+const deleteNewsSourceQuerySchema = z.object({
+  userId: z.string().min(1),
+  sourceId: z.string().min(1),
+});
+
+// Query validation schema for routes with userId only
+const userIdQuerySchema = z.object({
+  userId: z.string().min(1),
+});
+
 // Initialize default sources on first run
 let initialized = false;
 async function ensureDefaultSourcesExist() {
@@ -84,32 +113,29 @@ async function ensureDefaultSourcesExist() {
 }
 
 export const newsSourceRouter = new Hono()
-  .get("/", async (c) => {
-    console.log("Invoked newsSourceRouter.get");
+  .get("/", zValidator("query", getNewsSourcesQuerySchema), async (c) => {
+    const { userId, category } = c.req.valid("query");
+    console.log("Invoked newsSourceRouter.get", userId, category);
+
     await ensureDefaultSourcesExist();
-
-    const userId = c.req.query("userId") as string;
-    const category = c.req.query("category") as SourceCategory | undefined;
-
-    if (!userId) {
-      return c.json({ error: "userId is required" }, 400);
-    }
 
     try {
       const [publicSources, publicError] = await handleAsync(
-        newsSourceService.getPublicNewsSources(category)
+        newsSourceService.getPublicNewsSources(category ?? undefined)
       );
       if (publicError) {
-        console.error("Error fetching public sources:", publicError);
-        return c.json({ error: "Failed to fetch public news sources" }, 500);
+        throw new HTTPException(500, {
+          message: "Failed to fetch public news sources",
+        });
       }
 
       const [userSources, userError] = await handleAsync(
         newsSourceService.getUserNewsSources(userId)
       );
       if (userError) {
-        console.error("Error fetching user sources:", userError);
-        return c.json({ error: "Failed to fetch user news sources" }, 500);
+        throw new HTTPException(500, {
+          message: "Failed to fetch user news sources",
+        });
       }
 
       let allSources = [...(publicSources || []), ...(userSources || [])];
@@ -138,13 +164,14 @@ export const newsSourceRouter = new Hono()
         ],
       });
     } catch (error) {
-      console.error("Error fetching news sources:", error);
-      return c.json({ error: "Failed to fetch news sources" }, 500);
+      throw new HTTPException(500, {
+        message: "Failed to fetch news sources",
+      });
     }
   })
   // Create a custom news source
-  .post("/", async (c) => {
-    const { userId, ...sourceData } = await c.req.json();
+  .post("/", zValidator("json", createNewsSourceSchema), async (c) => {
+    const { userId, ...sourceData } = c.req.valid("json");
 
     try {
       // Check if user has reached custom source limit (e.g., 5 for free tier)
@@ -211,8 +238,8 @@ export const newsSourceRouter = new Hono()
     }
   })
   // Test a news source URL
-  .post("/test", async (c) => {
-    const { url } = await c.req.json();
+  .post("/test", zValidator("json", testRssSchema), async (c) => {
+    const { url } = c.req.valid("json");
 
     try {
       // Create a new parser instance
@@ -277,13 +304,9 @@ export const newsSourceRouter = new Hono()
     }
   })
   // Get a specific news source
-  .get("/:sourceId", async (c) => {
-    const userId = c.req.query("userId") as string;
+  .get("/:sourceId", zValidator("query", userIdQuerySchema), async (c) => {
+    const { userId } = c.req.valid("query");
     const sourceId = c.req.param("sourceId");
-
-    if (!userId) {
-      return c.json({ error: "userId is required" }, 400);
-    }
 
     try {
       const [source, sourceError] = await handleAsync(
@@ -309,45 +332,40 @@ export const newsSourceRouter = new Hono()
       return c.json({ error: "Failed to fetch news source" }, 500);
     }
   })
-  .patch("/:sourceId", async (c) => {
-    const { userId, ...updates } = await c.req.json();
-    const sourceId = c.req.param("sourceId");
+  .patch(
+    "/:sourceId",
+    zValidator("json", updateNewsSourceSchema),
+    async (c) => {
+      const { userId, ...updates } = c.req.valid("json");
+      const sourceId = c.req.param("sourceId");
 
-    if (!userId) {
-      return c.json({ error: "userId is required" }, 400);
-    }
+      try {
+        const [updatedSource, error] = await handleAsync(
+          newsSourceService.updateNewsSource(sourceId, updates, userId)
+        );
 
-    try {
-      const [updatedSource, error] = await handleAsync(
-        newsSourceService.updateNewsSource(sourceId, updates, userId)
-      );
-
-      if (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes("not found")) {
-          return c.json({ error: "News source not found" }, 404);
+        if (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          if (errorMessage.includes("not found")) {
+            return c.json({ error: "News source not found" }, 404);
+          }
+          if (errorMessage.includes("unauthorized")) {
+            return c.json({ error: "Cannot modify this news source" }, 403);
+          }
+          console.error("Error updating news source:", error);
+          return c.json({ error: "Failed to update news source" }, 500);
         }
-        if (errorMessage.includes("unauthorized")) {
-          return c.json({ error: "Cannot modify this news source" }, 403);
-        }
+
+        return c.json(updatedSource!);
+      } catch (error) {
         console.error("Error updating news source:", error);
         return c.json({ error: "Failed to update news source" }, 500);
       }
-
-      return c.json(updatedSource!);
-    } catch (error) {
-      console.error("Error updating news source:", error);
-      return c.json({ error: "Failed to update news source" }, 500);
     }
-  })
-  .delete("/", async (c) => {
-    const userId = c.req.query("userId") as string;
-    const sourceId = c.req.query("sourceId") as string;
-
-    if (!userId) {
-      return c.json({ error: "userId is required" }, 400);
-    }
+  )
+  .delete("/", zValidator("query", deleteNewsSourceQuerySchema), async (c) => {
+    const { userId, sourceId } = c.req.valid("query");
 
     try {
       const [result, error] = await handleAsync(

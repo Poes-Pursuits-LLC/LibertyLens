@@ -1,4 +1,5 @@
-import { Outlet, NavLink, useLocation } from "react-router";
+import { Outlet, NavLink, useLocation, useLoaderData } from "react-router";
+import type { Route } from "./+types/_layout";
 import {
   HomeIcon,
   RssIcon,
@@ -6,6 +7,7 @@ import {
   SparklesIcon,
   CogIcon,
   UserCircleIcon,
+  ArrowRightOnRectangleIcon,
 } from "@heroicons/react/24/outline";
 import {
   HomeIcon as HomeSolidIcon,
@@ -14,6 +16,9 @@ import {
   SparklesIcon as SparklesSolidIcon,
   CogIcon as CogSolidIcon,
 } from "@heroicons/react/24/solid";
+import { UserButton } from "@clerk/react-router";
+
+export { loader } from "./_layout.loader";
 
 const navigation = [
   {
@@ -50,6 +55,7 @@ const navigation = [
 
 export default function DashboardLayout() {
   const location = useLocation();
+  const { user, isSubscriber } = useLoaderData<typeof loader>();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -94,9 +100,20 @@ export default function DashboardLayout() {
               </li>
               <li className="mt-auto">
                 <div className="flex items-center gap-x-4 px-2 py-3 text-sm font-semibold leading-6 text-gray-700">
-                  <UserCircleIcon className="h-8 w-8" aria-hidden="true" />
-                  <span className="sr-only">Your profile</span>
-                  <span aria-hidden="true">John Galt</span>
+                  <UserButton
+                    appearance={{
+                      elements: {
+                        rootBox: "w-8 h-8",
+                        userButtonBox: "w-8 h-8",
+                      },
+                    }}
+                  />
+                  <div className="flex flex-col">
+                    <span>{user.firstName} {user.lastName}</span>
+                    {isSubscriber && (
+                      <span className="text-xs text-blue-600">Premium</span>
+                    )}
+                  </div>
                 </div>
               </li>
             </ul>

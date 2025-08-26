@@ -26,6 +26,7 @@ const getNewsSourceById = async (sourceId: string) => {
         cacheKey,
         cached: source,
         expireAt: getTTL(24), // Cache for 24 hours
+        type: "cache",
       })
       .go();
   }
@@ -48,10 +49,8 @@ const getPublicNewsSources = async (category?: SourceCategory) => {
       .go();
     sources = data.filter((s) => s?.isPublic) as NewsSource[];
   } else {
-    const { data } = await DynamoNewsSource()
-      .query.byIsPublic({ isPublic: true, sourceId: "public" })
-      .go();
-    sources = data as NewsSource[];
+    const { data } = await DynamoNewsSource().find({ isPublic: true }).go();
+    sources = data.filter((s) => s?.isPublic) as NewsSource[];
   }
 
   await DynamoCache()
@@ -72,11 +71,11 @@ const getUserNewsSources = async (userId: string) => {
     .go();
   if (cached?.cached) return cached.cached as NewsSource[];
 
-  const { data: sources } = await DynamoNewsSource()
-    .query.byAddedByUserId({ addedByUserId: userId, sourceId: "user" })
-    .go();
+  const { data: sources } = await DynamoNewsSource().scan.go();
 
-  const userSources = sources as NewsSource[];
+  const userSources = sources.filter(
+    (s) => s?.addedByUserId === userId
+  ) as NewsSource[];
 
   await DynamoCache()
     .put({
@@ -101,8 +100,9 @@ const createNewsSource = async (
     logoUrl: input.logoUrl,
     fetchConfig: input.fetchConfig,
     tags: input.tags || [],
-    addedByUserId: input.userId,
-    isPublic: !input.userId, // Public if no user ID provided
+    addedByUserId: input.userId || undefined,
+    isPublic: !input.userId,
+    isActive: true,
   };
 
   const [source, error] = await handleAsync(
@@ -110,7 +110,6 @@ const createNewsSource = async (
   );
 
   if (source?.data) {
-    // Clear relevant caches
     await Promise.all(
       [
         DynamoCache()
@@ -230,7 +229,7 @@ const markFetchFailure = async (sourceId: string, error: string) => {
 
 const getActiveSourcesForFetching = async (limit = 50) => {
   const { data } = await DynamoNewsSource()
-    .query.byIsActive({ isActive: true, sourceId: "active" })
+    .find({ isActive: true })
     .go({ limit });
 
   const activeSources = data.filter((s: any) => s?.reliability?.score >= 50);

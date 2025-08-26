@@ -154,21 +154,6 @@ export const DynamoNewsSource = () => {
           pk: { field: "gsi1pk", composite: ["category"] },
           sk: { field: "gsi1sk", composite: ["createdAt"] },
         },
-        byIsPublic: {
-          index: "byIsPublic",
-          pk: { field: "pk", composite: ["isPublic"] },
-          sk: { field: "sk", composite: ["sourceId"] },
-        },
-        byIsActive: {
-          index: "byIsActive",
-          pk: { field: "pk", composite: ["isActive"] },
-          sk: { field: "sk", composite: ["sourceId"] },
-        },
-        byAddedByUserId: {
-          index: "byAddedByUserId",
-          pk: { field: "pk", composite: ["addedByUserId"] },
-          sk: { field: "sk", composite: ["sourceId"] },
-        },
       },
     },
     {
