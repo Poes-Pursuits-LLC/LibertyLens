@@ -1,247 +1,357 @@
-import { getTTL, handleAsync } from '../utils'
-import { DynamoCache } from '../cache/cache.dynamo'
-import { DynamoArticle } from './article.dynamo'
-import type { Article, CreateArticleInput, ArticleSearchParams } from './article.model'
+import { getTTL, handleAsync } from "../utils";
+import { DynamoCache } from "../cache/cache.dynamo";
+import { DynamoArticle } from "./article.dynamo";
+import type {
+  Article,
+  CreateArticleInput,
+  ArticleSearchParams,
+} from "./article.model";
 
 const getArticleById = async (articleId: string): Promise<Article | null> => {
-    const cacheKey = `article:${articleId}`
-    const { data: cached } = await DynamoCache().get({ cacheKey }).go()
-    if (cached?.cached) return cached.cached as Article
+  try {
+    const cacheKey = `article:${articleId}`;
+    const cacheResult = await DynamoCache()
+      .get({ cacheKey, type: "cache" })
+      .go();
 
-    const { data: article } = await DynamoArticle()
-        .get({ articleId, type: 'article' })
-        .go()
-
-    if (article) {
-        await DynamoCache()
-            .put({
-                cacheKey,
-                cached: article,
-                expireAt: getTTL(24), // Cache for 24 hours
-            })
-            .go()
+    if (cacheResult.data && cacheResult.data.cached) {
+      return cacheResult.data.cached as Article;
     }
 
-    return article || null
-}
+    const articleResult = await DynamoArticle()
+      .get({ articleId, type: "article" })
+      .go();
 
-const getArticleByUrl = async (originalUrl: string): Promise<Article | null> => {
-    const { data } = await DynamoArticle()
-        .query.byUrl({ originalUrl, type: 'article' })
-        .go()
+    if (articleResult.data) {
+      await DynamoCache()
+        .put({
+          cacheKey,
+          cached: articleResult.data,
+          expireAt: getTTL(24), // Cache for 24 hours
+        })
+        .go();
 
-    return data?.[0] || null
-}
+      return articleResult.data as Article;
+    }
 
-const createArticle = async (input: CreateArticleInput) => {
-    // Check if article already exists with this URL
-    const existing = await getArticleByUrl(input.originalUrl)
+    return null;
+  } catch (error) {
+    console.error("Error getting article by ID:", error);
+    return null;
+  }
+};
+
+const getArticleByUrl = async (
+  originalUrl: string
+): Promise<Article | null> => {
+  try {
+    const result = await DynamoArticle().query.byUrl({ originalUrl }).go();
+
+    return (result.data?.[0] as Article) || null;
+  } catch (error) {
+    console.error("Error getting article by URL:", error);
+    return null;
+  }
+};
+
+const createArticle = async (
+  input: CreateArticleInput
+): Promise<[Article | null, any]> => {
+  try {
+    const existing = await getArticleByUrl(input.originalUrl);
     if (existing) {
-        return [existing, null] // Return existing article, no error
+      return [existing, null];
     }
 
-    const [article, error] = await handleAsync(
-        DynamoArticle()
-            .put({
-                sourceId: input.sourceId,
-                sourceName: input.sourceName,
-                originalUrl: input.originalUrl,
-                title: input.title,
-                summary: input.summary,
-                content: input.content,
-                author: input.author,
-                publishedAt: input.publishedAt,
-                tags: input.tags || [],
-                imageUrl: input.imageUrl,
-            })
-            .go(),
-    )
+    const result = await DynamoArticle()
+      .put({
+        sourceId: input.sourceId,
+        sourceName: input.sourceName,
+        originalUrl: input.originalUrl,
+        title: input.title,
+        summary: input.summary,
+        content: input.content,
+        author: input.author,
+        publishedAt: input.publishedAt,
+        tags: input.tags || [],
+        imageUrl: input.imageUrl,
+      })
+      .go();
 
-    return [article?.data || null, error]
-}
+    return [result.data as Article, null];
+  } catch (error) {
+    return [null, error];
+  }
+};
 
-const createArticlesBatch = async (articles: CreateArticleInput[]) => {
+const createArticlesBatch = async (
+  articles: CreateArticleInput[]
+): Promise<[Article[], any]> => {
+  try {
     // Filter out articles that already exist
     const existingChecks = await Promise.all(
-        articles.map(article => getArticleByUrl(article.originalUrl))
-    )
-    
-    const newArticles = articles.filter((_, index) => !existingChecks[index])
-    
+      articles.map((article) => getArticleByUrl(article.originalUrl))
+    );
+
+    const newArticles = articles.filter((_, index) => !existingChecks[index]);
+
     if (newArticles.length === 0) {
-        return [[], null] // All articles already exist
+      return [[], null]; // All articles already exist
     }
 
-    const [results, error] = await handleAsync(
-        DynamoArticle()
-            .put(
-                newArticles.map(article => ({
-                    sourceId: article.sourceId,
-                    sourceName: article.sourceName,
-                    originalUrl: article.originalUrl,
-                    title: article.title,
-                    summary: article.summary,
-                    content: article.content,
-                    author: article.author,
-                    publishedAt: article.publishedAt,
-                    tags: article.tags || [],
-                    imageUrl: article.imageUrl,
-                }))
-            )
-            .go(),
-    )
+    // ElectroDB batch operations
+    const items = newArticles.map((article) => ({
+      sourceId: article.sourceId,
+      sourceName: article.sourceName,
+      originalUrl: article.originalUrl,
+      title: article.title,
+      summary: article.summary,
+      content: article.content,
+      author: article.author,
+      publishedAt: article.publishedAt,
+      tags: article.tags || [],
+      imageUrl: article.imageUrl,
+    }));
 
-    return [results?.data || [], error]
-}
+    const savedArticles: Article[] = [];
+    const results = await Promise.allSettled(
+      items.map((item) => DynamoArticle().put(item).go())
+    );
+
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled" && result.value.data) {
+        savedArticles.push(result.value.data as Article);
+      } else if (result.status === "rejected") {
+        console.error(
+          `Failed to save article ${items[index].title}:`,
+          result.reason
+        );
+      }
+    });
+
+    return [savedArticles, null];
+  } catch (error) {
+    console.error("Error creating articles batch:", error);
+    return [[], error];
+  }
+};
 
 const getArticlesBySource = async (
-    sourceId: string,
-    startDate?: string,
-    endDate?: string,
-    cursor?: string,
-    limit = 20,
-) => {
-    let query = DynamoArticle().query.bySource({ sourceId })
+  sourceId: string,
+  startDate?: string,
+  endDate?: string,
+  cursor?: string,
+  limit = 20
+): Promise<[{ articles: Article[]; cursor: string | null }, any]> => {
+  try {
+    let query = DynamoArticle().query.bySource({ sourceId });
 
-    if (startDate && endDate) {
-        query = query.between(
-            { sourceId, publishedAt: startDate },
-            { sourceId, publishedAt: endDate },
-        )
-    } else if (startDate) {
-        query = query.gte({ sourceId, publishedAt: startDate })
-    } else if (endDate) {
-        query = query.lte({ sourceId, publishedAt: endDate })
-    }
-
-    if (cursor) {
-        query = query.cursor(cursor)
-    }
-
-    const [result, error] = await handleAsync(query.limit(limit).go())
+    const result = await query
+      .where((attr, op) => {
+        if (startDate && endDate) {
+          return op.between(attr.publishedAt, startDate, endDate);
+        } else if (startDate) {
+          return op.gte(attr.publishedAt, startDate);
+        } else if (endDate) {
+          return op.lte(attr.publishedAt, endDate);
+        }
+        return op.eq(attr.publishedAt, attr.publishedAt);
+      })
+      .go({
+        limit,
+        cursor: cursor ? cursor : undefined,
+      });
 
     return [
-        {
-            articles: result?.data || [],
-            cursor: result?.cursor || null,
-        },
-        error,
-    ]
-}
+      {
+        articles: (result.data || []) as Article[],
+        cursor: result.cursor || null,
+      },
+      null,
+    ];
+  } catch (error) {
+    console.error("Error getting articles by source:", error);
+    return [
+      {
+        articles: [],
+        cursor: null,
+      },
+      error,
+    ];
+  }
+};
 
 const getRecentArticles = async (
-    hours = 24,
-    cursor?: string,
-    limit = 20,
-) => {
-    const startDate = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
+  hours = 24,
+  cursor?: string,
+  limit = 20
+): Promise<[{ articles: Article[]; cursor: string | null }, any]> => {
+  try {
+    const startDate = new Date(
+      Date.now() - hours * 60 * 60 * 1000
+    ).toISOString();
 
-    let query = DynamoArticle()
-        .query.byPublishedDate({ type: 'article' })
-        .gte({ type: 'article', publishedAt: startDate })
-
-    if (cursor) {
-        query = query.cursor(cursor)
-    }
-
-    const [result, error] = await handleAsync(query.limit(limit).go())
+    const result = await DynamoArticle()
+      .query.byPublishedDate({ type: "article" })
+      .where((attr, op) => op.gte(attr.publishedAt, startDate))
+      .go({
+        limit,
+        cursor: cursor ? cursor : undefined,
+      });
 
     return [
-        {
-            articles: result?.data || [],
-            cursor: result?.cursor || null,
-        },
-        error,
-    ]
-}
+      {
+        articles: (result.data || []) as Article[],
+        cursor: result.cursor || null,
+      },
+      null,
+    ];
+  } catch (error) {
+    console.error("Error getting recent articles:", error);
+    return [
+      {
+        articles: [],
+        cursor: null,
+      },
+      error,
+    ];
+  }
+};
 
-const searchArticles = async (params: ArticleSearchParams) => {
-    const {
-        sourceId,
-        tags,
-        startDate,
-        endDate,
-        cursor,
-        limit = 20,
-    } = params
+const searchArticles = async (
+  params: ArticleSearchParams
+): Promise<[{ articles: Article[]; cursor: string | null }, any]> => {
+  try {
+    const { sourceId, tags, startDate, endDate, cursor, limit = 20 } = params;
 
-    // If sourceId is provided, use the bySource index
     if (sourceId) {
-        return getArticlesBySource(sourceId, startDate, endDate, cursor, limit)
+      return getArticlesBySource(sourceId, startDate, endDate, cursor, limit);
     }
 
-    // Otherwise, use the byPublishedDate index
-    let query = DynamoArticle().query.byPublishedDate({ type: 'article' })
+    const result = await DynamoArticle()
+      .query.byPublishedDate({ type: "article" })
+      .where((attr, op) => {
+        if (startDate && endDate) {
+          return op.between(attr.publishedAt, startDate, endDate);
+        } else if (startDate) {
+          return op.gte(attr.publishedAt, startDate);
+        } else if (endDate) {
+          return op.lte(attr.publishedAt, endDate);
+        }
+        return op.eq(attr.publishedAt, attr.publishedAt);
+      })
+      .go({
+        limit,
+        cursor: cursor ? cursor : undefined,
+      });
 
-    if (startDate && endDate) {
-        query = query.between(
-            { type: 'article', publishedAt: startDate },
-            { type: 'article', publishedAt: endDate },
-        )
-    } else if (startDate) {
-        query = query.gte({ type: 'article', publishedAt: startDate })
-    } else if (endDate) {
-        query = query.lte({ type: 'article', publishedAt: endDate })
-    }
-
-    if (cursor) {
-        query = query.cursor(cursor)
-    }
-
-    const [result, error] = await handleAsync(query.limit(limit).go())
-
-    // Filter by tags if provided (post-query filtering)
-    let filteredArticles = result?.data || []
+    let filteredArticles = (result.data || []) as Article[];
     if (tags && tags.length > 0) {
-        filteredArticles = filteredArticles.filter(article =>
-            tags.some(tag => article.tags.includes(tag))
-        )
+      filteredArticles = filteredArticles.filter((article) =>
+        tags.some((tag) => article.tags.includes(tag))
+      );
     }
 
     return [
-        {
-            articles: filteredArticles,
-            cursor: result?.cursor || null,
-        },
-        error,
-    ]
-}
+      {
+        articles: filteredArticles,
+        cursor: result.cursor || null,
+      },
+      null,
+    ];
+  } catch (error) {
+    console.error("Error searching articles:", error);
+    return [
+      {
+        articles: [],
+        cursor: null,
+      },
+      error,
+    ];
+  }
+};
 
-const updateArticleTags = async (articleId: string, tags: string[]) => {
+const updateArticleTags = async (
+  articleId: string,
+  tags: string[]
+): Promise<[Article | null, any]> => {
+  try {
     // Clear cache
-    await DynamoCache().delete({ cacheKey: `article:${articleId}` }).go()
+    await DynamoCache()
+      .delete({ cacheKey: `article:${articleId}`, type: "cache" })
+      .go();
 
-    const [article, error] = await handleAsync(
-        DynamoArticle()
-            .update({ articleId, type: 'article' })
-            .set({ tags })
-            .go({ response: 'all_new' }),
-    )
+    const result = await DynamoArticle()
+      .update({ articleId, type: "article" })
+      .set({ tags })
+      .go({ response: "all_new" });
 
-    return [article?.data || null, error]
-}
+    return [result.data as Article, null];
+  } catch (error) {
+    console.error("Error updating article tags:", error);
+    return [null, error];
+  }
+};
 
-const deleteArticle = async (articleId: string) => {
+const deleteArticle = async (
+  articleId: string
+): Promise<[Article | null, any]> => {
+  try {
     // Clear cache
-    await DynamoCache().delete({ cacheKey: `article:${articleId}` }).go()
+    await DynamoCache()
+      .delete({ cacheKey: `article:${articleId}`, type: "cache" })
+      .go();
 
-    const [result, error] = await handleAsync(
-        DynamoArticle()
-            .delete({ articleId, type: 'article' })
-            .go(),
-    )
+    const result = await DynamoArticle()
+      .delete({ articleId, type: "article" })
+      .go({ response: "all_old" });
 
-    return [result?.data || null, error]
-}
+    return [result.data as Article, null];
+  } catch (error) {
+    console.error("Error deleting article:", error);
+    return [null, error];
+  }
+};
+
+const saveFetchedArticles = async (
+  sourceId: string,
+  articles: CreateArticleInput[]
+): Promise<
+  [{ saved: number; total: number; errors: string[] } | null, any]
+> => {
+  try {
+    if (articles.length === 0) {
+      return [{ saved: 0, total: 0, errors: [] }, null];
+    }
+
+    const [savedArticles, error] = await createArticlesBatch(articles);
+
+    if (error) {
+      return [null, error];
+    }
+
+    const stats = {
+      saved: Array.isArray(savedArticles) ? savedArticles.length : 0,
+      total: articles.length,
+      errors: [] as string[],
+    };
+
+    return [stats, null];
+  } catch (error) {
+    console.error("Error saving fetched articles:", error);
+    return [null, error];
+  }
+};
 
 export const articleService = {
-    getArticleById,
-    getArticleByUrl,
-    createArticle,
-    createArticlesBatch,
-    getArticlesBySource,
-    getRecentArticles,
-    searchArticles,
-    updateArticleTags,
-    deleteArticle,
-}
+  getArticleById,
+  getArticleByUrl,
+  createArticle,
+  createArticlesBatch,
+  getArticlesBySource,
+  getRecentArticles,
+  searchArticles,
+  updateArticleTags,
+  deleteArticle,
+  saveFetchedArticles,
+};

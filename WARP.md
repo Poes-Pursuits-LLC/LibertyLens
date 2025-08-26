@@ -18,6 +18,18 @@ npm run dev
 npm run local
 ```
 
+### News Fetching
+
+```bash
+# Manually trigger news fetch (fetches from all active sources)
+npm run fetch-now
+
+# Seed database with limited fetch (10 sources max)
+npm run seed
+```
+
+The news fetching system runs automatically every 15 minutes via AWS EventBridge cron job. Articles are fetched from RSS feeds and stored in DynamoDB.
+
 ### Testing
 
 ```bash
@@ -61,6 +73,7 @@ SST v3 is used to manage AWS infrastructure. The configuration in `sst.config.ts
   - Production stage has removal protection (`retain`)
   - Non-production stages allow resource removal
 - **React deployment**: Uses `sst.aws.React` construct for optimized React app deployment
+- **News Fetching Cron**: Scheduled Lambda that runs every 15 minutes to fetch RSS articles
 
 ### SST Development Workflow
 
@@ -192,6 +205,40 @@ describe("formatPrice", () => {
 3. Use `npx sst shell` for scripts that need AWS resource access
 4. Deploy to staging/production using SST
 
+## News Fetching Architecture
+
+### Components
+
+1. **RSS Fetcher** (`app/core/article/rss-fetcher.ts`)
+   - Parses RSS feeds using `rss-parser` library
+   - Handles various RSS formats and edge cases
+   - Extracts images from media tags and content
+   - Returns normalized article data
+
+2. **Fetch Worker** (`app/workers/fetch-news.handler.ts`)
+   - Lambda function triggered by cron schedule
+   - Fetches active news sources with concurrency control (5 parallel)
+   - Saves new articles to DynamoDB
+   - Updates source reliability scores
+
+3. **Services**
+   - `newsSourceService`: Manages news sources and reliability tracking
+   - `articleService`: Handles article storage and retrieval
+
+### Default News Sources
+
+- **Libertarian**: Reason Magazine, Mises Institute, Liberty Fund
+- **Mainstream**: Reuters, BBC News
+- **Alternative**: The Intercept
+- **Financial**: Zero Hedge
+- **Tech**: Ars Technica
+
+### Monitoring
+
+- CloudWatch logs capture fetch statistics
+- Source reliability scores (0-100) track success rates
+- Sources below 30 score are automatically disabled
+
 ## Key Dependencies
 
 - React 19.1.0 with React Router 7.7.1
@@ -199,5 +246,6 @@ describe("formatPrice", () => {
 - Tailwind CSS 4.1.4 for styling
 - TypeScript 5.8.3 for type safety
 - SST 3.17.10 for AWS infrastructure management
+- RSS Parser 3.13.0 for RSS feed parsing
 - Vitest for testing framework (when configured)
 - Playwright for E2E testing (when configured)

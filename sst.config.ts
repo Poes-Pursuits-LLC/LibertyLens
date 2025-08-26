@@ -46,6 +46,16 @@ export default $config({
       link: [...Object.values(secret), table],
     });
 
+    new sst.aws.Cron("FetchNewsCron", {
+      schedule: "rate(1 day)",
+      job: {
+        handler: "app/functions/fetch-news.handler",
+        link: [...Object.values(secret), table],
+        timeout: "5 minutes",
+        memory: "512 MB",
+      },
+    });
+
     new sst.aws.React("Web", {
       environment: {
         ENVIRONMENT: secret.Environment.value,

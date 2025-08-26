@@ -8,8 +8,8 @@ import {
   PlusCircleIcon,
   ArrowRightIcon,
 } from "@heroicons/react/24/outline";
-import { Card } from "~/components/ui/Card";
-import { Button } from "~/components/ui/Button";
+import { Card } from "~/components/ui/card";
+import { Button } from "~/components/ui/button";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -81,21 +81,24 @@ const suggestedSources = [
     name: "Reason Magazine",
     description: "Libertarian news and commentary",
     type: "libertarian",
-    image: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&h=300&fit=crop",
+    image:
+      "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&h=300&fit=crop",
   },
   {
     id: 2,
     name: "Mises Institute",
     description: "Austrian economics and libertarian political theory",
     type: "economics",
-    image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=300&fit=crop",
+    image:
+      "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=300&fit=crop",
   },
   {
     id: 3,
     name: "Electronic Frontier Foundation",
     description: "Digital privacy and civil liberties",
     type: "privacy",
-    image: "https://images.unsplash.com/photo-1563986768494-4dee2763ff3f?w=400&h=300&fit=crop",
+    image:
+      "https://images.unsplash.com/photo-1563986768494-4dee2763ff3f?w=400&h=300&fit=crop",
   },
 ];
 
@@ -104,9 +107,7 @@ export default function Dashboard() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Welcome back, John
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-900">Welcome back, John</h1>
         <p className="mt-2 text-gray-600">
           Here's your liberty-focused news analysis for today
         </p>
@@ -122,19 +123,14 @@ export default function Dashboard() {
               className="px-4 py-5 sm:p-6 hover:shadow-md transition-shadow"
             >
               <dt className="flex items-center gap-x-3 text-sm font-medium text-gray-600">
-                <Icon
-                  className="h-5 w-5 text-blue-600"
-                  aria-hidden="true"
-                />
+                <Icon className="h-5 w-5 text-blue-600" aria-hidden="true" />
                 {stat.name}
               </dt>
               <dd className="mt-2 flex items-baseline justify-between">
                 <div className="text-2xl font-semibold text-gray-900">
                   {stat.value}
                 </div>
-                <div className="text-sm text-gray-600">
-                  {stat.change}
-                </div>
+                <div className="text-sm text-gray-600">{stat.change}</div>
               </dd>
             </Card>
           );
@@ -187,9 +183,7 @@ export default function Dashboard() {
                   >
                     {article.libertarianScore}
                   </div>
-                  <div className="text-xs text-gray-600">
-                    Liberty Score
-                  </div>
+                  <div className="text-xs text-gray-600">Liberty Score</div>
                 </div>
               </div>
             </Card>
@@ -252,17 +246,19 @@ export default function Dashboard() {
               />
               {/* Gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-              
+
               {/* Content */}
               <div className="relative h-full flex flex-col justify-end p-6 text-white">
-                <h3 className="text-xl font-bold mb-2">
-                  {source.name}
-                </h3>
+                <h3 className="text-xl font-bold mb-2">{source.name}</h3>
                 <p className="text-sm text-gray-200 mb-4">
                   {source.description}
                 </p>
                 <Link to="/dashboard/sources" className="inline-block">
-                  <Button size="sm" variant="secondary" className="bg-white/90 hover:bg-white text-gray-900">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="bg-white/90 hover:bg-white text-gray-900"
+                  >
                     Add to Feeds
                   </Button>
                 </Link>

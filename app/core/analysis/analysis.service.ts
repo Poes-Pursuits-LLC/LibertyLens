@@ -28,23 +28,36 @@ const getAnalysisById = async (analysisId: string) => {
 };
 
 const getAnalysisByArticle = async (articleId: string): Promise<Analysis[]> => {
-  const cacheKey = `analysis:article:${articleId}`;
-  const { data: cached } = await DynamoCache().get({ cacheKey }).go();
-  if (cached?.cached) return cached.cached as Analysis[];
+  try {
+    const cacheKey = `analysis:article:${articleId}`;
+    const cacheResult = await DynamoCache()
+      .get({ cacheKey, type: "cache" })
+      .go();
 
-  const { data: analyses } = await DynamoAnalysis()
-    .query.byArticle({ articleId })
-    .go();
+    if (cacheResult.data && cacheResult.data.cached) {
+      return cacheResult.data.cached as Analysis[];
+    }
 
-  await DynamoCache()
-    .put({
-      cacheKey,
-      cached: analyses,
-      expireAt: getTTL(12), // Cache for 12 hours
-    })
-    .go();
+    const analysesResult = await DynamoAnalysis()
+      .query.byArticle({ articleId })
+      .go();
 
-  return analyses;
+    const analyses = (analysesResult.data || []) as Analysis[];
+
+    await DynamoCache()
+      .put({
+        cacheKey,
+        cached: analyses,
+        expireAt: getTTL(12), // Cache for 12 hours
+        type: "cache",
+      })
+      .go();
+
+    return analyses;
+  } catch (error) {
+    console.error("Error getting analysis by article:", error);
+    return [];
+  }
 };
 
 const createAnalysis = async (
@@ -52,27 +65,39 @@ const createAnalysis = async (
     Analysis,
     "analysisId" | "createdAt" | "updatedAt" | "type"
   >
-) => {
-  const [analysis, error] = await handleAsync(
-    DynamoAnalysis().put(analysisData).go()
-  );
+): Promise<[Analysis | null, any]> => {
+  try {
+    const result = await DynamoAnalysis().put(analysisData).go();
 
-  if (analysis?.data) {
-    // Clear related caches
-    await Promise.all([
-      DynamoCache()
-        .delete({ cacheKey: `analysis:article:${analysisData.articleId}` })
-        .go(),
-      DynamoCache()
-        .delete({ cacheKey: `user-analyses:${analysisData.userId}` })
-        .go(),
-      DynamoCache()
-        .delete({ cacheKey: `feed-analyses:${analysisData.feedId}` })
-        .go(),
-    ]);
+    if (result?.data) {
+      // Clear related caches
+      await Promise.all([
+        DynamoCache()
+          .delete({
+            cacheKey: `analysis:article:${analysisData.articleId}`,
+            type: "cache",
+          })
+          .go(),
+        DynamoCache()
+          .delete({
+            cacheKey: `user-analyses:${analysisData.userId}`,
+            type: "cache",
+          })
+          .go(),
+        DynamoCache()
+          .delete({
+            cacheKey: `feed-analyses:${analysisData.feedId}`,
+            type: "cache",
+          })
+          .go(),
+      ]);
+    }
+
+    return [result?.data as Analysis, null];
+  } catch (error) {
+    console.error("Error creating analysis:", error);
+    return [null, error];
   }
-
-  return [analysis?.data || null, error];
 };
 
 const getUserAnalyses = async (
@@ -80,72 +105,89 @@ const getUserAnalyses = async (
   filter?: Partial<AnalysisFilter>,
   cursor?: string,
   limit = 20
-) => {
-  const cacheKey = `user-analyses:${userId}:${JSON.stringify(filter || {})}`;
+): Promise<[{ analyses: Analysis[]; cursor: string | null }, any]> => {
+  try {
+    const cacheKey = `user-analyses:${userId}:${JSON.stringify(filter || {})}`;
 
-  if (!cursor) {
-    // Only use cache for first page
-    const { data: cached } = await DynamoCache().get({ cacheKey }).go();
-    if (cached?.cached)
-      return cached.cached as { analyses: Analysis[]; cursor: string | null };
+    if (!cursor) {
+      // Only use cache for first page
+      const cacheResult = await DynamoCache()
+        .get({ cacheKey, type: "cache" })
+        .go();
+      if (cacheResult.data && cacheResult.data.cached) {
+        return cacheResult.data.cached as [
+          { analyses: Analysis[]; cursor: string | null },
+          any,
+        ];
+      }
+    }
+
+    const result = await DynamoAnalysis()
+      .query.byUser({ userId })
+      .go({
+        limit,
+        cursor: cursor ? cursor : undefined,
+      });
+
+    let filteredAnalyses = (result.data || []) as Analysis[];
+
+    // Apply filters
+    if (filter) {
+      if (filter.minScore !== undefined) {
+        filteredAnalyses = filteredAnalyses.filter(
+          (a: Analysis) => a.libertarianScore >= filter.minScore!
+        );
+      }
+      if (filter.maxScore !== undefined) {
+        filteredAnalyses = filteredAnalyses.filter(
+          (a: Analysis) => a.libertarianScore <= filter.maxScore!
+        );
+      }
+      if (filter.sentiment) {
+        filteredAnalyses = filteredAnalyses.filter(
+          (a: Analysis) => a.sentiment === filter.sentiment
+        );
+      }
+      if (filter.createdAfter) {
+        filteredAnalyses = filteredAnalyses.filter(
+          (a: Analysis) => a.createdAt >= filter.createdAfter!
+        );
+      }
+      if (filter.createdBefore) {
+        filteredAnalyses = filteredAnalyses.filter(
+          (a: Analysis) => a.createdAt <= filter.createdBefore!
+        );
+      }
+    }
+
+    const response = {
+      analyses: filteredAnalyses,
+      cursor: result.cursor || null,
+    };
+
+    // Cache first page results
+    if (!cursor) {
+      await DynamoCache()
+        .put({
+          cacheKey,
+          cached: response,
+          expireAt: getTTL(1), // Cache for 1 hour
+          type: "cache",
+        })
+        .go();
+    }
+
+    return [response, null];
+  } catch (error) {
+    console.error("Error getting user analyses:", error);
+    return [
+      {
+        analyses: [],
+        cursor: null,
+      },
+      error,
+    ];
   }
-
-  let query = DynamoAnalysis().query.byUser({ userId });
-
-  if (cursor) {
-    query = query.cursor(cursor);
-  }
-
-  const [result, error] = await handleAsync(query.limit(limit).go());
-
-  let filteredAnalyses = result?.data || [];
-
-  // Apply filters
-  if (filter) {
-    if (filter.minScore !== undefined) {
-      filteredAnalyses = filteredAnalyses.filter(
-        (a) => a.libertarianScore >= filter.minScore!
-      );
-    }
-    if (filter.maxScore !== undefined) {
-      filteredAnalyses = filteredAnalyses.filter(
-        (a) => a.libertarianScore <= filter.maxScore!
-      );
-    }
-    if (filter.sentiment) {
-      filteredAnalyses = filteredAnalyses.filter(
-        (a) => a.sentiment === filter.sentiment
-      );
-    }
-    if (filter.createdAfter) {
-      filteredAnalyses = filteredAnalyses.filter(
-        (a) => a.createdAt >= filter.createdAfter!
-      );
-    }
-    if (filter.createdBefore) {
-      filteredAnalyses = filteredAnalyses.filter(
-        (a) => a.createdAt <= filter.createdBefore!
-      );
-    }
-  }
-
-  const response = {
-    analyses: filteredAnalyses,
-    cursor: result?.cursor || null,
-  };
-
-  // Cache first page results
-  if (!cursor) {
-    await DynamoCache()
-      .put({
-        cacheKey,
-        cached: response,
-        expireAt: getTTL(1), // Cache for 1 hour
-      })
-      .go();
-  }
-
-  return [response, error];
 };
 
 const getFeedAnalyses = async (
@@ -154,84 +196,146 @@ const getFeedAnalyses = async (
   endDate?: string,
   cursor?: string,
   limit = 20
-) => {
-  let query = DynamoAnalysis().query.byFeed({ feedId });
+): Promise<[{ analyses: Analysis[]; cursor: string | null }, any]> => {
+  try {
+    const result = await DynamoAnalysis()
+      .query.byFeed({ feedId })
+      .where((attr, op) => {
+        if (startDate && endDate) {
+          return op.between(attr.createdAt, startDate, endDate);
+        } else if (startDate) {
+          return op.gte(attr.createdAt, startDate);
+        } else if (endDate) {
+          return op.lte(attr.createdAt, endDate);
+        }
+        return op.eq(attr.createdAt, attr.createdAt);
+      })
+      .go({
+        limit,
+        cursor: cursor ? cursor : undefined,
+      });
 
-  if (startDate && endDate) {
-    query = query.between(
-      { feedId, createdAt: startDate },
-      { feedId, createdAt: endDate }
-    );
-  } else if (startDate) {
-    query = query.gte({ feedId, createdAt: startDate });
-  } else if (endDate) {
-    query = query.lte({ feedId, createdAt: endDate });
+    return [
+      {
+        analyses: (result.data || []) as Analysis[],
+        cursor: result.cursor || null,
+      },
+      null,
+    ];
+  } catch (error) {
+    console.error("Error getting feed analyses:", error);
+    return [
+      {
+        analyses: [],
+        cursor: null,
+      },
+      error,
+    ];
   }
-
-  if (cursor) {
-    query = query.cursor(cursor);
-  }
-
-  const [result, error] = await handleAsync(query.limit(limit).go());
-
-  return [
-    {
-      analyses: result?.data || [],
-      cursor: result?.cursor || null,
-    },
-    error,
-  ];
 };
 
-const getTopScoringAnalyses = async (minScore = 80, hours = 24, limit = 10) => {
-  const startDate = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+const getTopScoringAnalyses = async (
+  minScore = 80,
+  limit = 10
+): Promise<Analysis[]> => {
+  try {
+    const result = await DynamoAnalysis()
+      .query.byScore({ type: "analysis" })
+      .where((attr, op) => op.gte(attr.libertarianScore, minScore))
+      .go({
+        limit,
+      });
 
-  const { data } = await DynamoAnalysis()
-    .query.byScore({ type: "analysis" })
-    .gte({ type: "analysis", libertarianScore: minScore, createdAt: startDate })
-    .limit(limit)
-    .go();
-
-  return data;
+    return (result.data || []) as Analysis[];
+  } catch (error) {
+    console.error("Error getting top scoring analyses:", error);
+    return [];
+  }
 };
 
 const updateAnalysisSentiment = async (
   analysisId: string,
   sentiment: Sentiment
-) => {
-  await DynamoCache()
-    .delete({ cacheKey: `analysis:${analysisId}` })
-    .go();
+): Promise<[Analysis | null, any]> => {
+  try {
+    await DynamoCache()
+      .delete({ cacheKey: `analysis:${analysisId}`, type: "cache" })
+      .go();
 
-  const [analysis, error] = await handleAsync(
-    DynamoAnalysis()
+    const result = await DynamoAnalysis()
       .update({ analysisId, type: "analysis" })
       .set({ sentiment })
-      .go({ response: "all_new" })
-  );
+      .go({ response: "all_new" });
 
-  return [analysis?.data || null, error];
+    return [result?.data as Analysis, null];
+  } catch (error) {
+    console.error("Error updating analysis sentiment:", error);
+    return [null, error];
+  }
 };
 
 const getAnalysisStats = async (userId?: string, feedId?: string) => {
-  let analyses: Analysis[] = [];
+  try {
+    let analyses: Analysis[] = [];
 
-  if (userId) {
-    const { data } = await DynamoAnalysis().query.byUser({ userId }).go();
-    analyses = data;
-  } else if (feedId) {
-    const { data } = await DynamoAnalysis().query.byFeed({ feedId }).go();
-    analyses = data;
-  } else {
-    // Get recent analyses for overall stats
-    const { data } = await DynamoAnalysis()
-      .query.byScore({ type: "analysis" })
-      .limit(100)
-      .go();
-    analyses = data;
-  }
+    if (userId) {
+      const result = await DynamoAnalysis().query.byUser({ userId }).go();
+      analyses = (result.data || []) as Analysis[];
+    } else if (feedId) {
+      const result = await DynamoAnalysis().query.byFeed({ feedId }).go();
+      analyses = (result.data || []) as Analysis[];
+    } else {
+      // Get recent analyses for overall stats
+      const result = await DynamoAnalysis()
+        .query.byScore({ type: "analysis" })
+        .go({
+          limit: 100,
+        });
+      analyses = (result.data || []) as Analysis[];
+    }
 
-  if (analyses.length === 0) {
+    if (analyses.length === 0) {
+      return {
+        totalAnalyses: 0,
+        averageScore: 0,
+        sentimentDistribution: { positive: 0, neutral: 0, critical: 0 },
+        topPrinciples: [],
+      };
+    }
+
+    const totalScore = analyses.reduce((sum, a) => sum + a.libertarianScore, 0);
+    const sentimentCounts = analyses.reduce(
+      (acc, a) => {
+        acc[a.sentiment] = (acc[a.sentiment] || 0) + 1;
+        return acc;
+      },
+      {} as Record<Sentiment, number>
+    );
+
+    const principleCounts: Record<string, number> = {};
+    analyses.forEach((a) => {
+      a.principles.forEach((p) => {
+        principleCounts[p.name] = (principleCounts[p.name] || 0) + 1;
+      });
+    });
+
+    const topPrinciples = Object.entries(principleCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([name, count]) => ({ name, count }));
+
+    return {
+      totalAnalyses: analyses.length,
+      averageScore: Math.round(totalScore / analyses.length),
+      sentimentDistribution: {
+        positive: sentimentCounts.positive || 0,
+        neutral: sentimentCounts.neutral || 0,
+        critical: sentimentCounts.critical || 0,
+      },
+      topPrinciples,
+    };
+  } catch (error) {
+    console.error("Error getting analysis stats:", error);
     return {
       totalAnalyses: 0,
       averageScore: 0,
@@ -239,38 +343,6 @@ const getAnalysisStats = async (userId?: string, feedId?: string) => {
       topPrinciples: [],
     };
   }
-
-  const totalScore = analyses.reduce((sum, a) => sum + a.libertarianScore, 0);
-  const sentimentCounts = analyses.reduce(
-    (acc, a) => {
-      acc[a.sentiment] = (acc[a.sentiment] || 0) + 1;
-      return acc;
-    },
-    {} as Record<Sentiment, number>
-  );
-
-  const principleCounts: Record<string, number> = {};
-  analyses.forEach((a) => {
-    a.principles.forEach((p) => {
-      principleCounts[p.name] = (principleCounts[p.name] || 0) + 1;
-    });
-  });
-
-  const topPrinciples = Object.entries(principleCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([name, count]) => ({ name, count }));
-
-  return {
-    totalAnalyses: analyses.length,
-    averageScore: Math.round(totalScore / analyses.length),
-    sentimentDistribution: {
-      positive: sentimentCounts.positive || 0,
-      neutral: sentimentCounts.neutral || 0,
-      critical: sentimentCounts.critical || 0,
-    },
-    topPrinciples,
-  };
 };
 
 export const analysisService = {

@@ -1,16 +1,14 @@
 import { hc } from "hono/client";
 import type { Route } from "./+types/index";
 import type { AppType } from "~/server/main";
+import { getAuth } from "@clerk/react-router/ssr.server";
 
-const SERVER_URL = process.env.SERVER_URL || "http://localhost:3001";
-
-export const dashboardLoader = async (
-  args: Route.LoaderArgs
-): Promise<Route.LoaderData> => {
+export const dashboardLoader = async (args: Route.LoaderArgs) => {
   try {
+    console.info("Invoked dashboardLoader");
     const url = new URL(args.request.url);
     const category = url.searchParams.get("category") || undefined;
-    const userId = url.searchParams.get("userId");
+    const userId = await getAuth(args);
 
     if (!userId) {
       return {
@@ -21,11 +19,8 @@ export const dashboardLoader = async (
       };
     }
 
-    const client = hc<AppType>(SERVER_URL);
-
-    const response = await client.api.sources.$get({
-      query: { userId, category },
-    });
+    const client = hc<AppType>(process.env.SERVER_URL!);
+    const response = await client.sources.$get();
 
     if (!response.ok) {
       const error = await response.json();
@@ -33,7 +28,7 @@ export const dashboardLoader = async (
         sources: [],
         count: 0,
         categories: [],
-        error: error.error || "Failed to fetch news sources",
+        error: error || "Failed to fetch news sources",
       };
     }
 
@@ -44,6 +39,7 @@ export const dashboardLoader = async (
       categories: data.categories || [],
     };
   } catch (error) {
+    console.error("Error in dashboardLoader:", error);
     return {
       sources: [],
       count: 0,

@@ -53,9 +53,7 @@ export default function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
-        {/* Sidebar component */}
         <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-gray-200 bg-white px-6 pb-4">
           <div className="flex h-16 shrink-0 items-center">
             <h1 className="text-2xl font-bold text-blue-600">Liberty Lens</h1>
@@ -106,12 +104,10 @@ export default function DashboardLayout() {
         </div>
       </div>
 
-      {/* Mobile header */}
       <div className="sticky top-0 z-40 flex items-center gap-x-6 bg-white px-4 py-4 shadow-sm sm:px-6 lg:hidden">
         <h1 className="text-xl font-bold text-blue-600">Liberty Lens</h1>
       </div>
 
-      {/* Mobile bottom navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 lg:hidden">
         <div className="flex justify-around">
           {navigation.map((item) => {
@@ -139,7 +135,6 @@ export default function DashboardLayout() {
         </div>
       </nav>
 
-      {/* Main content */}
       <div className="lg:pl-72">
         <main className="py-10 pb-20 lg:pb-10">
           <div className="px-4 sm:px-6 lg:px-8">

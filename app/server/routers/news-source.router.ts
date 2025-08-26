@@ -85,6 +85,7 @@ async function ensureDefaultSourcesExist() {
 
 export const newsSourceRouter = new Hono()
   .get("/", async (c) => {
+    console.log("Invoked newsSourceRouter.get");
     await ensureDefaultSourcesExist();
 
     const userId = c.req.query("userId") as string;

@@ -33,3 +33,49 @@ html {
 * {
   @apply transition-colors duration-200;
 }
+
+/* Aceternity UI Animations */
+@keyframes spotlight {
+  0% {
+    opacity: 0;
+    transform: translate(-72%, -62%) scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%,-40%) scale(1);
+  }
+}
+
+@keyframes scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-50% - 0.5rem));
+  }
+}
+
+.animate-spotlight {
+  animation: spotlight 2s ease .75s 1 forwards;
+}
+
+.animate-scroll {
+  animation: scroll var(--animation-duration) var(--animation-direction) linear infinite;
+}
+
+/* Shadow input style */
+.shadow-input {
+  box-shadow: 0px 2px 3px -1px rgba(0, 0, 0, 0.1),
+    0px 1px 0px 0px rgba(25, 28, 33, 0.02), 0px 0px 0px 1px rgba(25, 28, 33, 0.08);
+}
+
+/* CSS Variables for Aceternity UI */
+:root {
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+}
+
+/* Background grid pattern */
+.bg-grid-white\/\[0\.02\] {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(255 255 255 / 0.02)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
+}

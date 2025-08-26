@@ -1,13 +1,15 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
-import { getAuth } from '@clerk/backend';
 import type { Article, ArticleSearchParams } from '~/core/article/article.model';
+import { articleService } from '~/core/article/article.service';
+import { feedService } from '~/core/feed/feed.service';
 
 // Validation schemas
 const articleSearchSchema = z.object({
   sourceId: z.string().optional(),
   feedId: z.string().optional(),
+  userId: z.string().optional(), // Optional userId from query params
   tags: z.array(z.string()).optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
@@ -21,247 +23,285 @@ const articleSearchSchema = z.object({
 
 const articleRouter = new Hono();
 
-// TODO: Replace with actual DynamoDB calls
-const mockArticleDb = new Map<string, Article>();
-
-// Middleware to check authentication
-async function requireAuth(c: any, next: any) {
-  const auth = getAuth(c.req);
-  
-  if (!auth?.userId) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-  
-  c.set('userId', auth.userId);
-  await next();
-}
-
-// Helper to check if user has access to an article
-function hasArticleAccess(article: Article, userId: string, userFeedIds: string[]): boolean {
-  // For now, check if article belongs to one of user's feeds
-  // TODO: Implement proper access control with feed ownership check
-  return userFeedIds.includes(article.articleId);
-}
-
 // Get articles for user's feeds
-articleRouter.get('/', requireAuth, zValidator('query', articleSearchSchema), async (c) => {
-  const userId = c.get('userId');
+articleRouter.get('/', zValidator('query', articleSearchSchema), async (c) => {
   const params = c.req.valid('query');
+  const userId = params.userId; // Get userId from query params if provided
   
-  // TODO: Get user's feed IDs from feed service
-  const userFeedIds: string[] = []; // Placeholder
-  
-  let articles = Array.from(mockArticleDb.values());
-  
-  // Filter by feed/source
-  if (params.feedId) {
-    articles = articles.filter(a => a.articleId === params.feedId); // TODO: Fix this - should be feedId
-  }
-  if (params.sourceId) {
-    articles = articles.filter(a => a.sourceId === params.sourceId);
-  }
-  
-  // Filter by date range
-  if (params.startDate) {
-    articles = articles.filter(a => a.publishedAt >= params.startDate);
-  }
-  if (params.endDate) {
-    articles = articles.filter(a => a.publishedAt <= params.endDate);
-  }
-  
-  // Filter by tags
-  if (params.tags && params.tags.length > 0) {
-    articles = articles.filter(a => 
-      params.tags!.some(tag => a.tags.includes(tag))
-    );
-  }
-  
-  // Search in title and content
-  if (params.searchTerm) {
-    const searchLower = params.searchTerm.toLowerCase();
-    articles = articles.filter(a => 
-      a.title.toLowerCase().includes(searchLower) ||
-      a.summary.toLowerCase().includes(searchLower) ||
-      a.content.toLowerCase().includes(searchLower)
-    );
-  }
-  
-  // Sort articles
-  const sortBy = params.sortBy || 'publishedAt';
-  const sortOrder = params.sortOrder || 'desc';
-  
-  articles.sort((a, b) => {
-    let comparison = 0;
-    
-    switch (sortBy) {
-      case 'publishedAt':
-        comparison = new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime();
-        break;
-      case 'fetchedAt':
-        comparison = new Date(a.fetchedAt).getTime() - new Date(b.fetchedAt).getTime();
-        break;
-      case 'relevance':
-        // TODO: Implement relevance scoring
-        comparison = 0;
-        break;
+  try {
+    // If feedId is specified, get the feed's source IDs
+    let sourceIds: string[] | undefined;
+    if (params.feedId && userId) {
+      const feed = await feedService.getFeedById(params.feedId);
+      if (!feed) {
+        return c.json({ error: 'Feed not found' }, 404);
+      }
+      // Verify feed belongs to user if userId is provided
+      if (feed.userId !== userId) {
+        return c.json({ error: 'Feed not found' }, 404);
+      }
+      sourceIds = feed.sources;
+    } else if (params.feedId && !userId) {
+      // If feedId is specified but no userId, we can't verify ownership
+      const feed = await feedService.getFeedById(params.feedId);
+      if (!feed) {
+        return c.json({ error: 'Feed not found' }, 404);
+      }
+      sourceIds = feed.sources;
     }
+
+    // Build search parameters
+    const searchParams: ArticleSearchParams = {
+      sourceId: params.sourceId || (sourceIds && sourceIds.length === 1 ? sourceIds[0] : undefined),
+      tags: params.tags,
+      startDate: params.startDate,
+      endDate: params.endDate,
+      cursor: params.cursor,
+      limit: params.limit || 20,
+    };
+
+    // Fetch articles from database
+    const [result, error] = await articleService.searchArticles(searchParams);
     
-    return sortOrder === 'desc' ? -comparison : comparison;
-  });
-  
-  // Pagination
-  const limit = params.limit || 20;
-  const startIndex = params.cursor ? parseInt(params.cursor) : 0;
-  const paginatedArticles = articles.slice(startIndex, startIndex + limit);
-  
-  // Generate next cursor
-  const nextCursor = startIndex + limit < articles.length 
-    ? String(startIndex + limit) 
-    : null;
-  
-  return c.json({
-    articles: paginatedArticles,
-    nextCursor,
-    totalCount: articles.length,
-    hasMore: nextCursor !== null
-  });
-});
+    if (error) {
+      console.error('Error searching articles:', error);
+      return c.json({ error: 'Failed to fetch articles' }, 500);
+    }
 
-// Get a specific article
-articleRouter.get('/:articleId', requireAuth, async (c) => {
-  const userId = c.get('userId');
-  const articleId = c.req.param('articleId');
-  
-  const article = mockArticleDb.get(articleId);
-  
-  if (!article) {
-    return c.json({ error: 'Article not found' }, 404);
+    if (!result) {
+      return c.json({
+        articles: [],
+        nextCursor: null,
+        hasMore: false
+      });
+    }
+
+    // If multiple source IDs from feed, filter results
+    let articles = result.articles;
+    if (sourceIds && sourceIds.length > 1) {
+      articles = articles.filter(a => sourceIds.includes(a.sourceId));
+    }
+
+    // Post-process search term filtering if needed
+    if (params.searchTerm) {
+      const searchLower = params.searchTerm.toLowerCase();
+      articles = articles.filter(a => 
+        a.title.toLowerCase().includes(searchLower) ||
+        a.summary.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return c.json({
+      articles,
+      nextCursor: result.cursor,
+      hasMore: result.cursor !== null
+    });
+  } catch (error) {
+    console.error('Error in article search:', error);
+    return c.json({ error: 'Internal server error' }, 500);
   }
-  
-  // TODO: Check if user has access to this article
-  // For now, we'll assume all authenticated users can read articles
-  
-  return c.json(article);
-});
-
-// Get articles by feed
-articleRouter.get('/feed/:feedId', requireAuth, async (c) => {
-  const userId = c.get('userId');
-  const feedId = c.req.param('feedId');
-  const limit = parseInt(c.req.query('limit') || '20');
-  const cursor = c.req.query('cursor');
-  
-  // TODO: Verify user owns this feed
-  
-  let articles = Array.from(mockArticleDb.values())
-    .filter(a => a.articleId === feedId) // TODO: Fix this - should check feedId
-    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-  
-  // Pagination
-  const startIndex = cursor ? parseInt(cursor) : 0;
-  const paginatedArticles = articles.slice(startIndex, startIndex + limit);
-  
-  const nextCursor = startIndex + limit < articles.length 
-    ? String(startIndex + limit) 
-    : null;
-  
-  return c.json({
-    articles: paginatedArticles,
-    feedId,
-    nextCursor,
-    hasMore: nextCursor !== null
-  });
 });
 
 // Get trending articles (most analyzed in libertarian community)
-articleRouter.get('/trending', requireAuth, async (c) => {
+articleRouter.get('/trending', async (c) => {
   const limit = parseInt(c.req.query('limit') || '10');
   const timeframe = c.req.query('timeframe') || '24h'; // 24h, 7d, 30d
+  const userId = c.req.query('userId'); // Optional userId from query params
   
-  // Calculate cutoff date based on timeframe
-  const now = new Date();
-  let cutoffDate = new Date();
-  
-  switch (timeframe) {
-    case '24h':
-      cutoffDate.setHours(now.getHours() - 24);
-      break;
-    case '7d':
-      cutoffDate.setDate(now.getDate() - 7);
-      break;
-    case '30d':
-      cutoffDate.setDate(now.getDate() - 30);
-      break;
+  try {
+    // Calculate hours based on timeframe
+    let hours = 24;
+    switch (timeframe) {
+      case '7d':
+        hours = 24 * 7;
+        break;
+      case '30d':
+        hours = 24 * 30;
+        break;
+    }
+    
+    const [result, error] = await articleService.getRecentArticles(hours, undefined, limit);
+    
+    if (error) {
+      console.error('Error fetching trending articles:', error);
+      return c.json({ error: 'Failed to fetch trending articles' }, 500);
+    }
+    
+    // TODO: Implement actual trending logic based on:
+    // - Number of analyses
+    // - User engagement
+    // - Libertarian relevance score
+    // For now, just return recent articles
+    
+    return c.json({
+      articles: result?.articles || [],
+      timeframe,
+      count: result?.articles.length || 0
+    });
+  } catch (error) {
+    console.error('Error fetching trending articles:', error);
+    return c.json({ error: 'Internal server error' }, 500);
   }
+});
+
+// Get articles by feed
+articleRouter.get('/feed/:feedId', async (c) => {
+  const feedId = c.req.param('feedId');
+  const userId = c.req.query('userId'); // Optional userId from query params
+  const limit = parseInt(c.req.query('limit') || '20');
+  const cursor = c.req.query('cursor') || undefined;
   
-  // TODO: Implement actual trending logic based on:
-  // - Number of analyses
-  // - User engagement
-  // - Libertarian relevance score
+  try {
+    // Get the feed
+    const feed = await feedService.getFeedById(feedId);
+    if (!feed) {
+      return c.json({ error: 'Feed not found' }, 404);
+    }
+    
+    // Optionally verify ownership if userId is provided
+    if (userId && feed.userId !== userId) {
+      return c.json({ error: 'Feed not found or unauthorized' }, 404);
+    }
+    
+    // Get articles from all sources in the feed
+    const allArticles: Article[] = [];
+    let nextCursor: string | null = null;
+    
+    // For simplicity, fetch from first source with pagination
+    // In production, you'd want to merge and sort from all sources
+    if (feed.sources.length > 0) {
+      const [result, error] = await articleService.getArticlesBySource(
+        feed.sources[0],
+        undefined,
+        undefined,
+        cursor,
+        limit
+      );
+      
+      if (error) {
+        console.error('Error fetching feed articles:', error);
+        return c.json({ error: 'Failed to fetch articles' }, 500);
+      }
+      
+      if (result) {
+        allArticles.push(...result.articles);
+        nextCursor = result.cursor;
+      }
+    }
+    
+    return c.json({
+      articles: allArticles,
+      feedId,
+      nextCursor,
+      hasMore: nextCursor !== null
+    });
+  } catch (error) {
+    console.error('Error fetching feed articles:', error);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
+// Get a specific article
+articleRouter.get('/:articleId', async (c) => {
+  const articleId = c.req.param('articleId');
+  const userId = c.req.query('userId'); // Optional userId from query params
   
-  const trendingArticles = Array.from(mockArticleDb.values())
-    .filter(a => new Date(a.publishedAt) >= cutoffDate)
-    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-    .slice(0, limit);
-  
-  return c.json({
-    articles: trendingArticles,
-    timeframe,
-    count: trendingArticles.length
-  });
+  try {
+    const article = await articleService.getArticleById(articleId);
+    
+    if (!article) {
+      return c.json({ error: 'Article not found' }, 404);
+    }
+    
+    // No authentication required - articles are public
+    
+    return c.json(article);
+  } catch (error) {
+    console.error('Error fetching article:', error);
+    return c.json({ error: 'Failed to fetch article' }, 500);
+  }
 });
 
 // Mark article as read (for tracking)
-articleRouter.post('/:articleId/read', requireAuth, async (c) => {
-  const userId = c.get('userId');
+articleRouter.post('/:articleId/read', async (c) => {
   const articleId = c.req.param('articleId');
+  const body = await c.req.json();
+  const userId = body.userId || c.req.query('userId');
   
-  const article = mockArticleDb.get(articleId);
-  
-  if (!article) {
-    return c.json({ error: 'Article not found' }, 404);
+  if (!userId) {
+    return c.json({ error: 'userId is required' }, 400);
   }
   
-  // TODO: Track user read history
-  
-  return c.json({
-    message: 'Article marked as read',
-    articleId,
-    timestamp: new Date().toISOString()
-  });
+  try {
+    const article = await articleService.getArticleById(articleId);
+    
+    if (!article) {
+      return c.json({ error: 'Article not found' }, 404);
+    }
+    
+    // TODO: Track user read history in a separate service
+    
+    return c.json({
+      message: 'Article marked as read',
+      articleId,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error marking article as read:', error);
+    return c.json({ error: 'Failed to mark article as read' }, 500);
+  }
 });
 
 // Save article for later
-articleRouter.post('/:articleId/save', requireAuth, async (c) => {
-  const userId = c.get('userId');
+articleRouter.post('/:articleId/save', async (c) => {
   const articleId = c.req.param('articleId');
+  const body = await c.req.json();
+  const userId = body.userId || c.req.query('userId');
   
-  const article = mockArticleDb.get(articleId);
-  
-  if (!article) {
-    return c.json({ error: 'Article not found' }, 404);
+  if (!userId) {
+    return c.json({ error: 'userId is required' }, 400);
   }
   
-  // TODO: Implement saved articles functionality
-  
-  return c.json({
-    message: 'Article saved',
-    articleId,
-    timestamp: new Date().toISOString()
-  });
+  try {
+    const article = await articleService.getArticleById(articleId);
+    
+    if (!article) {
+      return c.json({ error: 'Article not found' }, 404);
+    }
+    
+    // TODO: Implement saved articles functionality in a separate service
+    
+    return c.json({
+      message: 'Article saved',
+      articleId,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error saving article:', error);
+    return c.json({ error: 'Failed to save article' }, 500);
+  }
 });
 
 // Remove saved article
-articleRouter.delete('/:articleId/save', requireAuth, async (c) => {
-  const userId = c.get('userId');
+articleRouter.delete('/:articleId/save', async (c) => {
   const articleId = c.req.param('articleId');
+  const userId = c.req.query('userId');
   
-  // TODO: Implement remove from saved articles
+  if (!userId) {
+    return c.json({ error: 'userId is required' }, 400);
+  }
   
-  return c.json({
-    message: 'Article removed from saved',
-    articleId
-  });
+  try {
+    // TODO: Implement remove from saved articles in a separate service
+    
+    return c.json({
+      message: 'Article removed from saved',
+      articleId
+    });
+  } catch (error) {
+    console.error('Error removing saved article:', error);
+    return c.json({ error: 'Failed to remove saved article' }, 500);
+  }
 });
 
 export { articleRouter };

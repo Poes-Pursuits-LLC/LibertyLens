@@ -6,11 +6,7 @@ import type {
   UpdateNewsSourceInput,
 } from "~/core/news-source";
 
-const SERVER_URL = process.env.SERVER_URL!;
-
-export const dashboardAction = async (
-  args: Route.ActionArgs
-): Promise<Route.ActionData> => {
+export const dashboardAction = async (args: Route.ActionArgs) => {
   try {
     const formData = await args.request.formData();
     const action = String(formData.get("action"));
@@ -35,9 +31,9 @@ export const dashboardAction = async (
   }
 };
 
-async function createNewsSource(formData: FormData): Promise<Route.ActionData> {
+async function createNewsSource(formData: FormData) {
   try {
-    const client = hc<AppType>(SERVER_URL);
+    const client = hc<AppType>(import.meta.env.SERVER_URL);
 
     const input: CreateNewsSourceInput = {
       name: String(formData.get("name")),
@@ -88,9 +84,9 @@ async function createNewsSource(formData: FormData): Promise<Route.ActionData> {
   }
 }
 
-async function updateNewsSource(formData: FormData): Promise<Route.ActionData> {
+async function updateNewsSource(formData: FormData) {
   try {
-    const client = hc<AppType>(SERVER_URL);
+    const client = hc<AppType>(import.meta.env.SERVER_URL);
     const sourceId = String(formData.get("sourceId"));
 
     const updates: UpdateNewsSourceInput = {
@@ -138,7 +134,7 @@ async function updateNewsSource(formData: FormData): Promise<Route.ActionData> {
 
 async function deleteNewsSource(formData: FormData) {
   try {
-    const client = hc<AppType>(SERVER_URL);
+    const client = hc<AppType>(import.meta.env.SERVER_URL);
     const sourceId = String(formData.get("sourceId"));
     const userId = String(formData.get("userId"));
 
@@ -160,9 +156,9 @@ async function deleteNewsSource(formData: FormData) {
   }
 }
 
-async function testRssFeed(formData: FormData): Promise<Route.ActionData> {
+async function testRssFeed(formData: FormData) {
   try {
-    const client = hc<AppType>(SERVER_URL);
+    const client = hc<AppType>(import.meta.env.SERVER_URL);
     const url = String(formData.get("url"));
 
     const response = await client.sources.test.$post({

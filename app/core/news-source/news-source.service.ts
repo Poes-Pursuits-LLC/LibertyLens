@@ -49,7 +49,7 @@ const getPublicNewsSources = async (category?: SourceCategory) => {
     sources = data.filter((s) => s?.isPublic) as NewsSource[];
   } else {
     const { data } = await DynamoNewsSource()
-      .query.publicSources({ isPublic: true })
+      .query.byIsPublic({ isPublic: true, sourceId: "public" })
       .go();
     sources = data as NewsSource[];
   }
@@ -73,18 +73,20 @@ const getUserNewsSources = async (userId: string) => {
   if (cached?.cached) return cached.cached as NewsSource[];
 
   const { data: sources } = await DynamoNewsSource()
-    .query.byUser({ addedByUserId: userId })
+    .query.byAddedByUserId({ addedByUserId: userId, sourceId: "user" })
     .go();
+
+  const userSources = sources as NewsSource[];
 
   await DynamoCache()
     .put({
       cacheKey,
-      cached: sources,
+      cached: userSources,
       expireAt: getTTL(1), // Cache for 1 hour
     })
     .go();
 
-  return sources;
+  return userSources;
 };
 
 const createNewsSource = async (
@@ -228,10 +230,12 @@ const markFetchFailure = async (sourceId: string, error: string) => {
 
 const getActiveSourcesForFetching = async (limit = 50) => {
   const { data } = await DynamoNewsSource()
-    .query.activeSources({ isActive: true })
+    .query.byIsActive({ isActive: true, sourceId: "active" })
     .go({ limit });
 
-  return data.filter((s) => s.reliability.score >= 50);
+  const activeSources = data.filter((s: any) => s?.reliability?.score >= 50);
+
+  return activeSources;
 };
 
 const initializeDefaultSources = async () => {
@@ -299,6 +303,14 @@ const deleteNewsSource = async (sourceId: string, userId?: string) => {
   return [result?.data || null, error];
 };
 
+const recordFetchSuccess = async (sourceId: string) => {
+  return markFetchSuccess(sourceId);
+};
+
+const recordFetchFailure = async (sourceId: string, error: string) => {
+  return markFetchFailure(sourceId, error);
+};
+
 export const newsSourceService = {
   getNewsSourceById,
   getPublicNewsSources,
@@ -310,4 +322,6 @@ export const newsSourceService = {
   getActiveSourcesForFetching,
   initializeDefaultSources,
   deleteNewsSource,
+  recordFetchSuccess,
+  recordFetchFailure,
 };

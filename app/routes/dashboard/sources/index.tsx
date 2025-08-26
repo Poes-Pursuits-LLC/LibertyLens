@@ -17,10 +17,9 @@ import {
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import type { CreateNewsSourceInput } from "~/core/news-source";
-import { dashboardAction } from "./actions";
 import { dashboardLoader } from "./loaders";
 
-export { dashboardAction, dashboardLoader };
+export const loader = dashboardLoader;
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -39,11 +38,13 @@ export default function SourcesIndex() {
     string | undefined
   >();
 
-  const actionData = useActionData<Route.ActionData>();
-  const loaderData = useLoaderData<Route.LoaderData>();
+  const actionData = useActionData();
+  const loaderData = useLoaderData();
   const navigation = useNavigation();
   const submit = useSubmit();
   const revalidator = useRevalidator();
+
+  console.log("loaderData", loaderData);
 
   const isLoading =
     navigation.state === "loading" || revalidator.state === "loading";
