@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import Parser from "rss-parser";
 import { newsSourceService } from "~/core/news-source/news-source.service";
-import { handleAsync } from "~/core";
+import { handleAsync } from "~/core/utils/helpers";
 import { HTTPException } from "hono/http-exception";
 
 const createNewsSourceSchema = z.object({
@@ -115,7 +115,7 @@ async function ensureDefaultSourcesExist() {
 export const newsSourceRouter = new Hono()
   .get("/", zValidator("query", getNewsSourcesQuerySchema), async (c) => {
     const { userId, category } = c.req.valid("query");
-    console.log("Invoked newsSourceRouter.get", userId, category);
+    console.info("Invoked sources.list", { userId, category });
 
     await ensureDefaultSourcesExist();
 
@@ -124,6 +124,7 @@ export const newsSourceRouter = new Hono()
         newsSourceService.getPublicNewsSources(category ?? undefined)
       );
       if (publicError) {
+        console.error("Error fetching public news sources:", publicError);
         throw new HTTPException(500, {
           message: "Failed to fetch public news sources",
         });
@@ -133,6 +134,7 @@ export const newsSourceRouter = new Hono()
         newsSourceService.getUserNewsSources(userId)
       );
       if (userError) {
+        console.error("Error fetching user news sources:", userError);
         throw new HTTPException(500, {
           message: "Failed to fetch user news sources",
         });
@@ -164,6 +166,7 @@ export const newsSourceRouter = new Hono()
         ],
       });
     } catch (error) {
+      console.error("Unexpected error listing news sources:", error);
       throw new HTTPException(500, {
         message: "Failed to fetch news sources",
       });
@@ -172,6 +175,13 @@ export const newsSourceRouter = new Hono()
   // Create a custom news source
   .post("/", zValidator("json", createNewsSourceSchema), async (c) => {
     const { userId, ...sourceData } = c.req.valid("json");
+    console.info("Invoked sources.create", {
+      userId,
+      name: sourceData.name,
+      url: sourceData.url,
+      type: sourceData.type,
+      category: sourceData.category,
+    });
 
     try {
       // Check if user has reached custom source limit (e.g., 5 for free tier)
@@ -180,7 +190,7 @@ export const newsSourceRouter = new Hono()
       );
       if (userSourcesError) {
         console.error("Error fetching user sources:", userSourcesError);
-        return c.json({ error: "Failed to fetch user sources" }, 500);
+        throw new HTTPException(500, { message: "Failed to fetch user sources" });
       }
       const activeUserSourceCount = (userSources || []).filter(
         (s: any) => s.isActive
@@ -201,7 +211,7 @@ export const newsSourceRouter = new Hono()
       );
       if (publicSourcesError) {
         console.error("Error fetching public sources:", publicSourcesError);
-        return c.json({ error: "Failed to fetch public sources" }, 500);
+        throw new HTTPException(500, { message: "Failed to fetch public sources" });
       }
       const allSources = [...(publicSources || []), ...(userSources || [])];
       const existingSource = allSources.find(
@@ -219,27 +229,26 @@ export const newsSourceRouter = new Hono()
       }
 
       // Create the news source
-      const [newSource, error] = await handleAsync(
-        newsSourceService.createNewsSource({
-          ...sourceData,
-          userId,
-        })
-      );
+      const [newSource, error] = await newsSourceService.createNewsSource({
+        ...sourceData,
+        userId,
+      });
 
       if (error) {
         console.error("Error creating news source:", error);
-        return c.json({ error: "Failed to create news source" }, 500);
+        throw new HTTPException(500, { message: "Failed to create news source" });
       }
 
       return c.json(newSource!, 201);
     } catch (error) {
-      console.error("Error creating news source:", error);
-      return c.json({ error: "Failed to create news source" }, 500);
+      console.error("Unexpected error creating news source:", error);
+      throw new HTTPException(500, { message: "Failed to create news source" });
     }
   })
   // Test a news source URL
   .post("/test", zValidator("json", testRssSchema), async (c) => {
     const { url } = c.req.valid("json");
+    console.info("Invoked sources.test", { url });
 
     try {
       // Create a new parser instance
@@ -307,6 +316,7 @@ export const newsSourceRouter = new Hono()
   .get("/:sourceId", zValidator("query", userIdQuerySchema), async (c) => {
     const { userId } = c.req.valid("query");
     const sourceId = c.req.param("sourceId");
+    console.info("Invoked sources.get", { sourceId, userId });
 
     try {
       const [source, sourceError] = await handleAsync(
@@ -314,7 +324,7 @@ export const newsSourceRouter = new Hono()
       );
       if (sourceError) {
         console.error("Error fetching news source:", sourceError);
-        return c.json({ error: "Failed to fetch news source" }, 500);
+        throw new HTTPException(500, { message: "Failed to fetch news source" });
       }
 
       if (!source) {
@@ -328,8 +338,8 @@ export const newsSourceRouter = new Hono()
 
       return c.json(source);
     } catch (error) {
-      console.error("Error fetching news source:", error);
-      return c.json({ error: "Failed to fetch news source" }, 500);
+      console.error("Unexpected error fetching news source:", error);
+      throw new HTTPException(500, { message: "Failed to fetch news source" });
     }
   })
   .patch(
@@ -338,10 +348,13 @@ export const newsSourceRouter = new Hono()
     async (c) => {
       const { userId, ...updates } = c.req.valid("json");
       const sourceId = c.req.param("sourceId");
+      console.info("Invoked sources.update", { sourceId, userId });
 
       try {
-        const [updatedSource, error] = await handleAsync(
-          newsSourceService.updateNewsSource(sourceId, updates, userId)
+        const [updatedSource, error] = await newsSourceService.updateNewsSource(
+          sourceId,
+          updates,
+          userId
         );
 
         if (error) {
@@ -354,22 +367,24 @@ export const newsSourceRouter = new Hono()
             return c.json({ error: "Cannot modify this news source" }, 403);
           }
           console.error("Error updating news source:", error);
-          return c.json({ error: "Failed to update news source" }, 500);
+          throw new HTTPException(500, { message: "Failed to update news source" });
         }
 
         return c.json(updatedSource!);
       } catch (error) {
-        console.error("Error updating news source:", error);
-        return c.json({ error: "Failed to update news source" }, 500);
+        console.error("Unexpected error updating news source:", error);
+        throw new HTTPException(500, { message: "Failed to update news source" });
       }
     }
   )
   .delete("/", zValidator("query", deleteNewsSourceQuerySchema), async (c) => {
     const { userId, sourceId } = c.req.valid("query");
+    console.info("Invoked sources.delete", { sourceId, userId });
 
     try {
-      const [result, error] = await handleAsync(
-        newsSourceService.deleteNewsSource(sourceId, userId)
+      const [result, error] = await newsSourceService.deleteNewsSource(
+        sourceId,
+        userId
       );
 
       if (error) {
@@ -382,12 +397,12 @@ export const newsSourceRouter = new Hono()
           return c.json({ error: "Cannot delete this news source" }, 403);
         }
         console.error("Error deleting news source:", error);
-        return c.json({ error: "Failed to delete news source" }, 500);
+        throw new HTTPException(500, { message: "Failed to delete news source" });
       }
 
       return c.json({ message: "News source deleted successfully" });
     } catch (error) {
-      console.error("Error deleting news source:", error);
-      return c.json({ error: "Failed to delete news source" }, 500);
+      console.error("Unexpected error deleting news source:", error);
+      throw new HTTPException(500, { message: "Failed to delete news source" });
     }
   });

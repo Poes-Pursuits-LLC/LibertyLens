@@ -8,10 +8,14 @@ describe('CustomRSSForm', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    // Mock successful fetch by default
+    // Mock successful RSS test by default with the shape the component expects
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ valid: true })
+      json: async () => ({
+        isValid: true,
+        message: 'Feed validated',
+        feedInfo: { itemCount: 0, title: 'Example Feed', description: 'Desc' },
+      }),
     })
   })
 
@@ -94,10 +98,9 @@ describe('CustomRSSForm', () => {
       expect(screen.getByText('Testing feed...')).toBeInTheDocument()
     })
 
-    // Simulate successful test
-    await waitFor(() => {
-      expect(screen.getByText('Feed is valid!')).toBeInTheDocument()
-    })
+    // Simulate successful test - success message includes item count, so match substring
+    const successEl = await screen.findByText(/Feed is valid!/i)
+    expect(successEl).toBeInTheDocument()
   })
 
   it('shows error for invalid feed URL', async () => {

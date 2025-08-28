@@ -76,7 +76,7 @@ const createArticle = async (
         tags: input.tags || [],
         imageUrl: input.imageUrl,
       })
-      .go();
+      .go({ response: "all_new" });
 
     return [result.data as Article, null];
   } catch (error) {
@@ -115,7 +115,7 @@ const createArticlesBatch = async (
 
     const savedArticles: Article[] = [];
     const results = await Promise.allSettled(
-      items.map((item) => DynamoArticle().put(item).go())
+      items.map((item) => DynamoArticle().put(item).go({ response: "all_new" }))
     );
 
     results.forEach((result, index) => {

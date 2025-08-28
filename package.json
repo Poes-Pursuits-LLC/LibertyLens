@@ -11,9 +11,10 @@
     "integration-tests": "vitest --project integration-tests",
     "e2e-tests": "npx playwright test app/e2e.spec.ts",
     "aws-login": "aws sso login --profile=liberty-lens-dev",
-    "fetch-now": "npx sst shell 'node -e \"import(\\\"./app/workers/fetch-news.handler.js\\\").then(m => m.handler({}).then(console.log))\"'"
+    "reset-default-sources": "sst shell --stage $STAGE -- tsx scripts/news/reset-default-sources.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.876.0",
     "@clerk/backend": "^2.9.4",
     "@clerk/react-router": "^1.9.4",
     "@heroicons/react": "^2.2.0",

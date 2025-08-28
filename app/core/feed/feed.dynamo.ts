@@ -162,16 +162,6 @@ export const DynamoFeed = () => {
           pk: { field: "gsi1pk", composite: ["userId"] },
           sk: { field: "gsi1sk", composite: ["createdAt"] },
         },
-        byUserAndActive: {
-          index: "byUserAndActive",
-          pk: { field: "pk", composite: ["feedId"] },
-          sk: { field: "sk", composite: ["userId", "isActive"] },
-        },
-        allActiveFeeds: {
-          index: "allActiveFeeds",
-          pk: { field: "pk", composite: ["feedId"] },
-          sk: { field: "sk", composite: ["isActive"] },
-        },
       },
     },
     {

@@ -8,9 +8,9 @@ import type {
 } from "./feed.model";
 import { defaultAnalysisSettings } from "./feed.model";
 
-const getFeedById = async (feedId: string): Promise<FeedConfig | null> => {
+const getFeedById = async (feedId: string) => {
   const cacheKey = `feed:${feedId}`;
-  const { data: cached } = await DynamoCache().get({ cacheKey }).go();
+  const { data: cached } = await DynamoCache().get({ cacheKey, type: "feed" }).go();
   if (cached?.cached) return cached.cached as FeedConfig;
 
   const { data: feed } = await DynamoFeed().get({ feedId, type: "feed" }).go();
@@ -30,30 +30,30 @@ const getFeedById = async (feedId: string): Promise<FeedConfig | null> => {
 
 const getUserFeeds = async (userId: string, onlyActive = false) => {
   const cacheKey = `user-feeds:${userId}:${onlyActive ? "active" : "all"}`;
-  const { data: cached } = await DynamoCache().get({ cacheKey }).go();
+  const { data: cached } = await DynamoCache().get({ cacheKey, type: "feed" }).go();
   if (cached?.cached) return cached.cached as FeedConfig[];
 
   let feeds: FeedConfig[];
 
   if (onlyActive) {
-    // Use LSI for userId + isActive query
+    // Use byUser GSI and filter for active feeds
     const { data } = await DynamoFeed()
-      .query.byUserAndActive({ feedId: "user", userId, isActive: true })
+      .query.byUser({ userId })
       .go();
-    feeds = data;
+    feeds = (data as any).filter((f: any) => f.isActive);
   } else {
-    // Use LSI for userId query
+    // Use byUser GSI for all feeds
     const { data } = await DynamoFeed()
-      .query.byUserAndActive({ feedId: "user", userId, isActive: true })
+      .query.byUser({ userId })
       .go();
-    feeds = data;
+    feeds = data as any;
   }
 
   await DynamoCache()
     .put({
       cacheKey,
       cached: feeds,
-      expireAt: getTTL(1), // Cache for 1 hour
+      expireAt: getTTL(1),
     })
     .go();
 
@@ -61,13 +61,27 @@ const getUserFeeds = async (userId: string, onlyActive = false) => {
 };
 
 const createFeed = async (userId: string, input: CreateFeedInput) => {
+  // Map source IDs into full NewsSource objects; ignore any not found
+  const { newsSourceService } = await import("../news-source/news-source.service")
+  const resolvedSources = (
+    await Promise.all((input.sources || []).map((id) => newsSourceService.getNewsSourceById(id)))
+  )
+    .filter(Boolean)
+    .map((s: any) => ({
+      sourceId: s.sourceId,
+      name: s.name,
+      url: s.url,
+      type: s.type,
+      enabled: true,
+    }))
+
   const [feed, error] = await handleAsync(
     DynamoFeed()
       .put({
         userId,
         name: input.name,
         description: input.description,
-        sources: input.sources || [],
+        sources: resolvedSources,
         topics: input.topics || [],
         keywords: input.keywords || [],
         excludeKeywords: input.excludeKeywords || [],
@@ -84,10 +98,10 @@ const createFeed = async (userId: string, input: CreateFeedInput) => {
     // Clear user feeds cache
     await Promise.all([
       DynamoCache()
-        .delete({ cacheKey: `user-feeds:${userId}:all` })
+        .delete({ cacheKey: `user-feeds:${userId}:all`, type: "feed" })
         .go(),
       DynamoCache()
-        .delete({ cacheKey: `user-feeds:${userId}:active` })
+        .delete({ cacheKey: `user-feeds:${userId}:active`, type: "feed" })
         .go(),
     ]);
   }
@@ -109,13 +123,13 @@ const updateFeed = async (
   // Clear caches
   await Promise.all([
     DynamoCache()
-      .delete({ cacheKey: `feed:${feedId}` })
+      .delete({ cacheKey: `feed:${feedId}`, type: "feed" })
       .go(),
     DynamoCache()
-      .delete({ cacheKey: `user-feeds:${userId}:all` })
+      .delete({ cacheKey: `user-feeds:${userId}:all`, type: "feed" })
       .go(),
     DynamoCache()
-      .delete({ cacheKey: `user-feeds:${userId}:active` })
+      .delete({ cacheKey: `user-feeds:${userId}:active`, type: "feed" })
       .go(),
   ]);
 
@@ -158,13 +172,13 @@ const deleteFeed = async (feedId: string, userId: string) => {
   // Clear caches
   await Promise.all([
     DynamoCache()
-      .delete({ cacheKey: `feed:${feedId}` })
+      .delete({ cacheKey: `feed:${feedId}`, type: "feed" })
       .go(),
     DynamoCache()
-      .delete({ cacheKey: `user-feeds:${userId}:all` })
+      .delete({ cacheKey: `user-feeds:${userId}:all`, type: "feed" })
       .go(),
     DynamoCache()
-      .delete({ cacheKey: `user-feeds:${userId}:active` })
+      .delete({ cacheKey: `user-feeds:${userId}:active`, type: "feed" })
       .go(),
   ]);
 
@@ -177,7 +191,7 @@ const deleteFeed = async (feedId: string, userId: string) => {
 
 const markFeedRefreshed = async (feedId: string) => {
   await DynamoCache()
-    .delete({ cacheKey: `feed:${feedId}` })
+    .delete({ cacheKey: `feed:${feedId}`, type: "feed" })
     .go();
 
   const [feed, error] = await handleAsync(

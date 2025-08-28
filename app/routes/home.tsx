@@ -3,8 +3,8 @@ import { LandingPage } from "../components/LandingPage";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Liberty Lens - AI-Powered News Analysis for Libertarians" },
-    { name: "description", content: "Break free from mainstream media propaganda. Get news analyzed through a principled libertarian lens with AI-powered insights." },
+    { title: "Liberty Lens — Compare Coverage, Verify Claims, Decide for Yourself" },
+    { name: "description", content: "A cleaner, more balanced news dashboard. Compare how multiple outlets cover the same story, see bias and tone indicators, verify claims with sources, and read concise context cards." },
   ];
 }
 

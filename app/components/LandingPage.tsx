@@ -1,12 +1,17 @@
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Link } from "react-router";
-import { BackgroundBeams } from "./ui/aceternity/background-beams";
+import { Spotlight as MinimalSpotlight } from "./../components/effects/Spotlight";
+import { Spotlight as AceternitySpotlight } from "./ui/aceternity/spotlight";
 import { TextGenerateEffect } from "./ui/aceternity/text-generate-effect";
-import { Spotlight } from "./ui/aceternity/spotlight";
-import { MovingBorderButton } from "./ui/aceternity/moving-border";
 import { BentoGrid, BentoGridItem } from "./ui/aceternity/bento-grid";
 import { InfiniteMovingCards } from "./ui/aceternity/infinite-moving-cards";
+import { BackgroundBeams } from "./ui/aceternity/background-beams";
+import { MovingBorderButton } from "./ui/aceternity/moving-border";
+import { FloatingElements } from "./ui/aceternity/floating-elements";
+import { ShimmerBorder } from "./ui/aceternity/shimmer-border";
+import { GradientBlur } from "./ui/aceternity/gradient-blur";
+import { TypewriterEffect } from "./ui/aceternity/typewriter-effect";
 import { motion } from "framer-motion";
 
 export function LandingPage() {
@@ -38,571 +43,328 @@ export function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-black dark:bg-black overflow-x-hidden">
+    <div className="min-h-screen bg-[var(--surface)] text-[var(--text)] overflow-x-hidden">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-3.5 focus:py-2.5 focus:rounded-md focus:bg-[var(--surface-2)] focus:text-[var(--text)] focus:shadow"
+      >
+        Skip to content
+      </a>
+
       {/* Navigation Bar */}
-      <motion.nav
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-black/50 border-b border-gray-800"
+      <nav
+        aria-label="Primary"
+className="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-[var(--surface)]/70 border-b border-white/10"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <motion.div
-              className="flex items-center"
-              whileHover={{ scale: 1.05 }}
-            >
-              <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-cyan-500">
-                Liberty Lens
-              </h1>
-            </motion.div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center">
+              <h1 className="text-xl font-semibold tracking-tight">Liberty Lens</h1>
+            </div>
+            <div className="flex items-center gap-3">
               <Link to="/login">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-gray-300 hover:text-white"
-                >
+                <Button variant="ghost" size="sm" className="hover:bg-[var(--surface-2)]">
                   Sign In
                 </Button>
               </Link>
-              <Link to="/login">
-                <MovingBorderButton
-                  borderRadius="1.75rem"
-                  className="bg-slate-900 dark:bg-slate-900 text-white dark:text-white border-neutral-200 dark:border-slate-800 px-6 py-2 text-sm"
-                >
-                  Get Started
-                </MovingBorderButton>
+              <Link to="/login" className="inline-flex">
+                <span className="btn-minimal focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Get Started</span>
               </Link>
             </div>
           </div>
         </div>
-      </motion.nav>
+      </nav>
 
-      {/* Hero Section with Spotlight Effect */}
-      <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black/[0.96] antialiased bg-grid-white/[0.02]">
-        <Spotlight
-          className="-top-40 left-0 md:left-60 md:-top-20"
-          fill="blue"
-        />
-        <div className="relative z-10 w-full pt-20 md:pt-0">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-center"
-            >
-              <h1 className="text-4xl md:text-7xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-b from-neutral-50 to-neutral-400 bg-opacity-50">
-                Break Free from the
-                <br />
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-cyan-500">
-                  Media Matrix
-                </span>
-              </h1>
-              <div className="mt-6">
-                <TextGenerateEffect
-                  words="Tired of statist propaganda disguised as news? Get AI-powered analysis through a principled libertarian lens."
-                  className="text-lg md:text-xl text-neutral-300 max-w-3xl mx-auto"
-                />
-              </div>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1, duration: 0.5 }}
-                className="mt-10 flex flex-col sm:flex-row gap-4 justify-center"
-              >
-                <Link to="/login">
-                  <MovingBorderButton
-                    borderRadius="1.75rem"
-                    className="bg-slate-900 dark:bg-slate-900 text-white dark:text-white border-neutral-200 dark:border-slate-800 px-8 py-3"
-                    duration={3000}
-                  >
-                    Start Free Trial
-                  </MovingBorderButton>
-                </Link>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="border-gray-700 text-gray-300 hover:bg-gray-900"
+      <main id="main" data-landing>
+
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <AceternitySpotlight className="-z-10 opacity-60" />
+        <MinimalSpotlight className="-z-10 opacity-60" color="oklch(80% 0.09 240 / 0.55)" />
+        <GradientBlur className="-z-10 opacity-40" colors={["#3B82F6", "#A855F7", "#EC4899"]} />
+        <div className="relative mx-auto max-w-7xl px-6 md:px-8 py-24 md:py-32">
+          <div className="max-w-3xl text-center mx-auto">
+            <div className="flex justify-center gap-1 mb-1">
+              <TypewriterEffect 
+                words={["Truth", "Freedom", "Analysis", "Understanding"]} 
+                className="text-[var(--accent)] font-semibold text-xl md:text-2xl mt-1" 
+              />
+            </div>
+            <h1 className="text-4xl md:text-6xl font-semibold tracking-tight">
+              Cut Through the <span className="text-[var(--accent)]">Narrative</span>, Find the Truth
+            </h1>
+            <TextGenerateEffect
+              words="Break free from algorithmic echo chambers and media manipulation. Get unbiased analysis that respects your intelligence and individual judgment."
+              className="mt-5 text-base md:text-lg leading-7 muted"
+            />
+            <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+              <Link to="/login" className="inline-flex">
+                <MovingBorderButton
+                  borderRadius="0.75rem"
+                  className="bg-[var(--text)] text-[var(--accent-contrast)] px-6 py-3 font-medium"
+                  containerClassName="bg-transparent"
+                  borderClassName="bg-gradient-to-r from-[var(--accent)] to-blue-500"
+                  duration={3000}
                 >
-                  Watch Demo
-                </Button>
-              </motion.div>
-            </motion.div>
-          </div>
-        </div>
-        <BackgroundBeams className="absolute inset-0" />
-      </div>
-
-      {/* Pain Points Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 relative bg-gray-950">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-orange-500 mb-4">
-              Sound Familiar?
-            </h2>
-            <p className="text-lg text-gray-400">The mainstream narrative you're fed every day</p>
-          </motion.div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              viewport={{ once: true }}
-              whileHover={{ scale: 1.05 }}
-              className="relative group"
-            >
-              <Card className="p-8 bg-gradient-to-br from-gray-900 to-gray-800 border-gray-700 hover:border-red-500/50 transition-all duration-300">
-                <div className="text-red-500 mb-4">
-                  <svg
-                    className="w-12 h-12"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold mb-3 text-white">
-                  "Every Crisis Needs More Government"
-                </h3>
-                <p className="text-gray-400">
-                  Mainstream media's solution to every problem is always the same:
-                  more regulations, more spending, more control. Where's the
-                  perspective that questions expanding state power?
-                </p>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              viewport={{ once: true }}
-              whileHover={{ scale: 1.05 }}
-              className="relative group"
-            >
-              <Card className="p-8 bg-gradient-to-br from-gray-900 to-gray-800 border-gray-700 hover:border-red-500/50 transition-all duration-300">
-                <div className="text-red-500 mb-4">
-                  <svg
-                    className="w-12 h-12"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold mb-3 text-white">
-                  Economic Illiteracy Everywhere
-                </h3>
-                <p className="text-gray-400">
-                  Price controls will fix inflation! Print more money! Tax the
-                  rich! You're drowning in Keynesian nonsense while Austrian
-                  economics gets ignored.
-                </p>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              viewport={{ once: true }}
-              whileHover={{ scale: 1.05 }}
-              className="relative group"
-            >
-              <Card className="p-8 bg-gradient-to-br from-gray-900 to-gray-800 border-gray-700 hover:border-red-500/50 transition-all duration-300">
-                <div className="text-red-500 mb-4">
-                  <svg
-                    className="w-12 h-12"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold mb-3 text-white">
-                  False Left-Right Paradigm
-                </h3>
-                <p className="text-gray-400">
-                  Team Red vs Team Blue theater while both expand the surveillance
-                  state, increase debt, and erode civil liberties. Where's the
-                  voice for actual liberty?
-                </p>
-              </Card>
-            </motion.div>
+                  Start Free Trial
+                </MovingBorderButton>
+              </Link>
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="border-white/20 hover:bg-[var(--surface-2)] backdrop-blur"
+                aria-label="Watch demo"
+              >
+                Watch Demo
+              </Button>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section with Bento Grid */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-          className="max-w-7xl mx-auto"
-        >
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-cyan-500 mb-4">
-              News Analysis for Free Thinkers
+      {/* Pain Points Section */}
+      <section className="py-16 md:py-20 px-6 md:px-8 bg-[var(--surface)]" aria-labelledby="pain-points">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 id="pain-points" className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight">
+              Escape the Information Prison
             </h2>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              Liberty Lens cuts through the statist fog with AI-powered analysis
-              grounded in libertarian principles
-            </p>
+            <p className="mt-3 text-lg muted">Why independent minds need better tools to navigate today's media landscape</p>
           </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            <ShimmerBorder className="rounded-xl" duration={5}>
+              <div className="soft-card rounded-xl p-8 h-full">
+                <div className="mb-4 accent" aria-hidden="true">
+                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold mb-3">Corporate Media Gatekeeping</h3>
+                <p className="muted">Legacy outlets push approved narratives while Big Tech algorithms suppress dissenting voices. Your feed becomes your prison.</p>
+              </div>
+            </ShimmerBorder>
+            <ShimmerBorder className="rounded-xl" duration={5} shimmerColor="rgba(165, 180, 252, 0.3)">
+              <div className="soft-card rounded-xl p-8 h-full">
+                <div className="mb-4 accent" aria-hidden="true">
+                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold mb-3">Manufactured Consensus</h3>
+                <p className="muted">"Experts" and "fact-checkers" shield questionable claims from scrutiny. Independent verification becomes nearly impossible.</p>
+              </div>
+            </ShimmerBorder>
+            <ShimmerBorder className="rounded-xl" duration={5} shimmerColor="rgba(147, 197, 253, 0.3)">
+              <div className="soft-card rounded-xl p-8 h-full">
+                <div className="mb-4 accent" aria-hidden="true">
+                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold mb-3">Information Overload by Design</h3>
+                <p className="muted">Endless noise drowns out signal. Complex stories get oversimplified while trivial scandals dominate cycles.</p>
+              </div>
+            </ShimmerBorder>
+          </div>
+        </div>
+      </section>
 
-          <BentoGrid className="max-w-7xl mx-auto">
+      {/* Features Section */}
+      <section className="py-16 md:py-20 px-6 md:px-8 bg-[var(--surface)] relative overflow-hidden" aria-labelledby="features">
+        <FloatingElements className="-z-10" count={12} color="rgba(96, 165, 250, 0.2)" />
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 id="features" className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight">
+              Tools for Independent Thinkers
+            </h2>
+            <p className="mt-3 text-lg muted max-w-3xl mx-auto">Cut through propaganda with AI that respects your ability to think for yourself.</p>
+          </div>
+          <BentoGrid className="gap-6">
             <BentoGridItem
-              className="md:col-span-2 bg-gradient-to-br from-gray-900 to-gray-800"
-              title="Principled Analysis"
-              description="Every article filtered through core libertarian principles: NAP, property rights, voluntary exchange, and individual sovereignty."
+              className="soft-card p-6"
               icon={
-                <svg
-                  className="w-8 h-8 text-blue-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
-                  />
-                </svg>
-              }
-              header={
-                <div className="flex justify-center items-center h-32 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-lg">
-                  <div className="text-6xl">⚖️</div>
+                <div className="mb-3 accent" aria-hidden="true">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                  </svg>
                 </div>
               }
+              title="Break the Echo Chamber"
+              description="See how different sources frame the same events. Spot the patterns in narrative control."
             />
             <BentoGridItem
-              className="bg-gradient-to-br from-gray-900 to-gray-800"
-              title="Real-Time Analysis"
-              description="Get instant libertarian perspective on breaking news."
+              className="soft-card p-6"
               icon={
-                <svg
-                  className="w-8 h-8 text-cyan-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-              }
-              header={
-                <div className="flex justify-center items-center h-20 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-lg">
-                  <div className="text-4xl">⚡</div>
+                <div className="mb-3 accent" aria-hidden="true">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
                 </div>
               }
+              title="Decode the Spin"
+              description="AI analysis reveals loaded language, emotional manipulation, and missing context in real-time."
             />
             <BentoGridItem
-              className="bg-gradient-to-br from-gray-900 to-gray-800"
-              title="Fact-Based Critique"
-              description="Austrian economics meets constitutional analysis."
+              className="soft-card p-6"
               icon={
-                <svg
-                  className="w-8 h-8 text-green-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              }
-              header={
-                <div className="flex justify-center items-center h-20 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg">
-                  <div className="text-4xl">✓</div>
+                <div className="mb-3 accent" aria-hidden="true">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                 </div>
               }
+              title="Trust But Verify"
+              description="Every claim traced to original sources. No appeals to authority—judge the evidence yourself."
             />
             <BentoGridItem
-              className="bg-gradient-to-br from-gray-900 to-gray-800"
-              title="Customizable Depth"
-              description="From quick takes to comprehensive deep dives."
+              className="soft-card p-6"
               icon={
-                <svg
-                  className="w-8 h-8 text-purple-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                  />
-                </svg>
-              }
-              header={
-                <div className="flex justify-center items-center h-20 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg">
-                  <div className="text-4xl">🎚️</div>
+                <div className="mb-3 accent" aria-hidden="true">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                  </svg>
                 </div>
               }
+              title="Historical Context"
+              description="Understand the deeper patterns and incentives behind today's headlines. Connect the dots."
             />
             <BentoGridItem
-              className="bg-gradient-to-br from-gray-900 to-gray-800"
-              title="Transparent Bias"
-              description="Honest about our libertarian lens - no hidden agenda."
+              className="soft-card p-6"
               icon={
-                <svg
-                  className="w-8 h-8 text-orange-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              }
-              header={
-                <div className="flex justify-center items-center h-20 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg">
-                  <div className="text-4xl">🔍</div>
+                <div className="mb-3 accent" aria-hidden="true">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                 </div>
               }
+              title="Signal Over Noise"
+              description="Cut through the distraction. Get the essential facts without the emotional manipulation."
             />
           </BentoGrid>
-        </motion.div>
+        </div>
       </section>
 
       {/* How It Works Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-950">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-          className="max-w-7xl mx-auto"
-        >
-          <h2 className="text-3xl sm:text-4xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-green-500 to-emerald-500 mb-16">
-            Escape the Echo Chamber in 3 Steps
+      <section className="py-16 md:py-20 px-6 md:px-8 bg-[var(--surface)] relative overflow-hidden" aria-labelledby="how-it-works">
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(to_top,var(--surface-2),transparent)]" />
+        <div className="max-w-7xl mx-auto">
+          <h2 id="how-it-works" className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-center mb-12">
+            Reclaim Your Intellectual <span className="text-[var(--accent)]">Freedom</span>
           </h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              viewport={{ once: true }}
+          <div className="grid md:grid-cols-3 gap-6">
+            <motion.div 
+              className="h-full"
               whileHover={{ y: -5 }}
-              className="relative"
+              transition={{ duration: 0.3 }}
             >
-              <Card className="text-center bg-gradient-to-br from-gray-900 to-gray-800 border-gray-700 p-8 h-full">
-                <motion.div
-                  whileHover={{ rotate: 360 }}
-                  transition={{ duration: 0.5 }}
-                  className="w-20 h-20 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold"
-                >
+              <Card className="text-center soft-card p-8 h-full rounded-xl">
+                <div className="w-16 h-16 bg-[var(--surface-2)] text-[var(--text)] rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold border border-black/5" aria-hidden="true">
                   1
-                </motion.div>
-                <h3 className="text-xl font-semibold mb-3 text-white">
-                  Choose Your Sources
-                </h3>
-                <p className="text-gray-400">
-                  Add mainstream outlets, independent journalists, or niche
-                  publications. We'll analyze them all through a consistent
-                  libertarian framework.
-                </p>
-              </Card>
+                </div>
+              <h3 className="text-xl font-semibold mb-3">Curate Your Intelligence</h3>
+              <p className="muted">Select sources across the spectrum—mainstream, alternative, and independent. No algorithmic curation.</p>
+            </Card>
             </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              viewport={{ once: true }}
+            <motion.div 
+              className="h-full"
               whileHover={{ y: -5 }}
-              className="relative"
+              transition={{ duration: 0.3 }}
             >
-              <Card className="text-center bg-gradient-to-br from-gray-900 to-gray-800 border-gray-700 p-8 h-full">
-                <motion.div
-                  whileHover={{ rotate: 360 }}
-                  transition={{ duration: 0.5 }}
-                  className="w-20 h-20 bg-gradient-to-r from-cyan-500 to-green-500 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold"
-                >
+              <Card className="text-center soft-card p-8 h-full rounded-xl">
+                <div className="w-16 h-16 bg-[var(--surface-2)] text-[var(--text)] rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold border border-black/5" aria-hidden="true">
                   2
-                </motion.div>
-                <h3 className="text-xl font-semibold mb-3 text-white">
-                  AI Analyzes Every Article
-                </h3>
-                <p className="text-gray-400">
-                  Our AI identifies statist assumptions, economic fallacies, and
-                  constitutional violations while highlighting free-market
-                  solutions.
-                </p>
-              </Card>
+                </div>
+              <h3 className="text-xl font-semibold mb-3">Unbiased Analysis</h3>
+              <p className="muted">AI trained on logic and evidence—not political correctness. Identifies manipulation tactics and missing context.</p>
+            </Card>
             </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              viewport={{ once: true }}
+            <motion.div 
+              className="h-full"
               whileHover={{ y: -5 }}
-              className="relative"
+              transition={{ duration: 0.3 }}
             >
-              <Card className="text-center bg-gradient-to-br from-gray-900 to-gray-800 border-gray-700 p-8 h-full">
-                <motion.div
-                  whileHover={{ rotate: 360 }}
-                  transition={{ duration: 0.5 }}
-                  className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold"
-                >
+              <Card className="text-center soft-card p-8 h-full rounded-xl">
+                <div className="w-16 h-16 bg-[var(--surface-2)] text-[var(--text)] rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold border border-black/5" aria-hidden="true">
                   3
-                </motion.div>
-                <h3 className="text-xl font-semibold mb-3 text-white">
-                  Get Clarity, Not Propaganda
-                </h3>
-                <p className="text-gray-400">
-                  Read the original article alongside principled libertarian
-                  analysis. Finally see through the authoritarian narrative.
-                </p>
-              </Card>
+                </div>
+              <h3 className="text-xl font-semibold mb-3">Think for Yourself</h3>
+              <p className="muted">Armed with facts and context, form your own opinions. No pre-digested conclusions or "approved" narratives.</p>
+            </Card>
             </motion.div>
           </div>
-        </motion.div>
+        </div>
       </section>
 
-      {/* Testimonial Section with Infinite Moving Cards */}
-      <section className="py-20 relative bg-black">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-          className="text-center mb-12"
-        >
-          <h2 className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-500 mb-4">
-            What Liberty Lovers Say
-          </h2>
-          <p className="text-lg text-gray-400">Join thousands who've found clarity</p>
-        </motion.div>
-        <InfiniteMovingCards
-          items={testimonials}
-          direction="right"
-          speed="slow"
-          className="mx-auto"
-        />
+      {/* Testimonials */}
+      <section className="py-16 md:py-20 px-6 md:px-8 bg-[var(--surface)] relative overflow-hidden" aria-labelledby="testimonials">
+        <BackgroundBeams className="-z-10 opacity-5" />
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-10">
+            <h2 id="testimonials" className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight">Free Minds, Free Markets</h2>
+            <p className="mt-3 text-lg muted">Join independent thinkers who've broken free from the narrative</p>
+          </div>
+          {/* Aceternity Infinite Moving Cards */}
+          <InfiniteMovingCards
+            items={testimonials}
+            speed="normal"
+            direction="left"
+            className="mt-2"
+          />
+          {/* Static fallback for ultra-small screens or if JS disabled */}
+          <noscript>
+            <div className="grid gap-6 md:grid-cols-2 mt-6">
+              {testimonials.map((t, idx) => (
+                <div key={idx} className="soft-card rounded-xl p-6 text-left">
+                  <blockquote className="text-base md:text-lg">“{t.quote}”</blockquote>
+                  <footer className="mt-4 text-sm muted">— {t.name}, {t.title}</footer>
+                </div>
+              ))}
+            </div>
+          </noscript>
+        </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-          className="max-w-4xl mx-auto text-center relative z-10"
-        >
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            viewport={{ once: true }}
-            className="text-4xl sm:text-5xl font-bold text-white mb-4"
-          >
-            Ready to Think for Yourself?
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            viewport={{ once: true }}
-            className="text-xl text-white/90 mb-8 max-w-2xl mx-auto"
-          >
-            Join thousands who've rejected the false choice between left and
-            right authoritarianism.
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            viewport={{ once: true }}
-            className="flex flex-col sm:flex-row gap-4 justify-center mb-6"
-          >
-            <Link to="/login">
+      <section className="py-16 md:py-20 px-6 md:px-8 bg-[var(--surface-2)] relative overflow-hidden" aria-labelledby="cta">
+        <BackgroundBeams className="opacity-20" />
+        <GradientBlur className="-z-10 opacity-30" colors={["#3B82F6", "#06B6D4", "#6366F1"]} animated={true} />
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <h2 id="cta" className="text-3xl sm:text-4xl font-semibold tracking-tight">Break Free from the Matrix</h2>
+          <p className="mt-4 text-lg muted max-w-2xl mx-auto">
+            Stop consuming pre-packaged opinions. Start thinking independently with tools built for free minds.
+          </p>
+          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+            <Link to="/login" className="inline-flex">
               <MovingBorderButton
-                borderRadius="2rem"
-                className="bg-white/10 backdrop-blur-md text-white border-white/20 px-8 py-4 text-lg font-semibold hover:bg-white/20 transition-all"
-                duration={2000}
+                borderRadius="0.75rem"
+                className="bg-[var(--text)] text-[var(--accent-contrast)] px-8 py-3 font-medium"
+                containerClassName="bg-transparent"
+                borderClassName="bg-gradient-to-r from-[var(--accent)] to-blue-500"
+                duration={3000}
               >
-                Start Free 14-Day Trial
+                Start Free Trial
               </MovingBorderButton>
             </Link>
             <Link to="/login">
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm px-8 py-4 text-lg"
-              >
+              <Button size="lg" variant="outline" className="border-white/20 hover:bg-[var(--surface)] backdrop-blur">
                 Sign In
               </Button>
             </Link>
-          </motion.div>
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            viewport={{ once: true }}
-            className="text-sm text-white/70"
-          >
-            Cancel anytime. We respect your freedom to choose.
-          </motion.p>
-        </motion.div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent z-0" />
+          </div>
+          <p className="mt-4 text-sm muted">No contracts. No censorship. Your mind, your choice.</p>
+        </div>
       </section>
 
+      </main>
+
       {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 bg-gray-900 text-gray-400">
+      <footer className="py-12 px-6 md:px-8 bg-[var(--surface)] border-t border-black/5 text-[var(--text)]">
         <div className="max-w-7xl mx-auto text-center">
           <p className="mb-4">
-            Liberty Lens - Because mainstream media forgot that government isn't
-            the solution.
+            Liberty Lens - Because free minds deserve better than manufactured consent.
           </p>
-          <p className="text-sm">
-            © 2024 Liberty Lens. Built by libertarians, for libertarians.
-          </p>
+          <p className="text-sm muted">© 2024 Liberty Lens. Built by independent thinkers, for independent thinkers.</p>
         </div>
       </footer>
     </div>

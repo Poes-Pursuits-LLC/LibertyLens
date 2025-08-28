@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useLocation, useLoaderData } from "react-router";
+import { Outlet, NavLink, useLocation } from "react-router";
 import type { Route } from "./+types/_layout";
 import {
   HomeIcon,
@@ -6,8 +6,6 @@ import {
   GlobeAltIcon,
   SparklesIcon,
   CogIcon,
-  UserCircleIcon,
-  ArrowRightOnRectangleIcon,
 } from "@heroicons/react/24/outline";
 import {
   HomeIcon as HomeSolidIcon,
@@ -17,8 +15,11 @@ import {
   CogIcon as CogSolidIcon,
 } from "@heroicons/react/24/solid";
 import { UserButton } from "@clerk/react-router";
+import { dashboardLayoutLoader } from "~/loaders/dashboard-layout.loader";
 
-export { loader } from "./_layout.loader";
+export async function loader(args: Route.LoaderArgs) {
+  return await dashboardLayoutLoader(args);
+}
 
 const navigation = [
   {
@@ -53,9 +54,9 @@ const navigation = [
   },
 ];
 
-export default function DashboardLayout() {
+export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
   const location = useLocation();
-  const { user, isSubscriber } = useLoaderData<typeof loader>();
+  const { user, isSubscriber } = loaderData as any;
 
   return (
     <div className="min-h-screen bg-gray-50">

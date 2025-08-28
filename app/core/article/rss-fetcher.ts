@@ -3,11 +3,15 @@ import type { NewsSource } from '../news-source/news-source.model';
 import type { CreateArticleInput } from './article.model';
 
 // Custom parser with extended fields
-interface CustomFeed extends Parser.Output<CustomItem> {}
+interface CustomFeed extends Parser.Output<CustomItem> { }
 interface CustomItem extends Parser.Item {
   'media:content'?: { $?: { url?: string } };
   'media:thumbnail'?: { $?: { url?: string } };
-  enclosure?: { url?: string; type?: string };
+  enclosure?: { url: string; type: string };
+  'content:encoded'?: string;
+  date?: string;
+  description?: string;
+  author?: string;
 }
 
 const parser = new Parser<CustomFeed, CustomItem>({
@@ -33,24 +37,24 @@ function extractImageUrl(item: CustomItem): string | undefined {
   if (item['media:thumbnail']?.$?.url) {
     return item['media:thumbnail'].$.url;
   }
-  
+
   // Then try media:content
   if (item['media:content']?.$?.url) {
     return item['media:content'].$.url;
   }
-  
+
   // Then try enclosure if it's an image
   if (item.enclosure?.url && item.enclosure.type?.startsWith('image/')) {
     return item.enclosure.url;
   }
-  
+
   // Try to find image in content
   const contentHtml = item.content || item['content:encoded'] || '';
   const imgMatch = contentHtml.match(/<img[^>]+src=["']([^"']+)["']/i);
   if (imgMatch?.[1]) {
     return imgMatch[1];
   }
-  
+
   return undefined;
 }
 
@@ -62,7 +66,7 @@ function parsePublishedDate(item: CustomItem): string {
   if (!dateStr) {
     return new Date().toISOString();
   }
-  
+
   try {
     const date = new Date(dateStr);
     return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
@@ -78,7 +82,7 @@ function extractTags(item: CustomItem): string[] {
   if (!item.categories || !Array.isArray(item.categories)) {
     return [];
   }
-  
+
   return item.categories
     .filter((cat): cat is string => typeof cat === 'string')
     .map(cat => cat.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-'))
@@ -110,16 +114,14 @@ export async function fetchRSSArticles(
     // Add custom headers if configured
     const customParser = source.fetchConfig?.headers
       ? new Parser<CustomFeed, CustomItem>({
-          ...parser.options,
-          headers: {
-            ...parser.options.headers,
-            ...source.fetchConfig.headers,
-          },
-        })
+        headers: {
+          ...source.fetchConfig.headers,
+        },
+      })
       : parser;
 
     const feed = await customParser.parseURL(source.url);
-    
+
     if (!feed.items || feed.items.length === 0) {
       return [[], null];
     }
@@ -130,7 +132,7 @@ export async function fetchRSSArticles(
         const normalizedUrl = normalizeUrl(item.link!);
         const summary = item.contentSnippet || item.summary || item.description || '';
         const content = item.content || item['content:encoded'] || summary;
-        
+
         return {
           sourceId: source.sourceId,
           sourceName: source.name,
@@ -147,8 +149,11 @@ export async function fetchRSSArticles(
 
     return [articles, null];
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return [[], new Error(`Failed to fetch RSS from ${source.name}: ${errorMessage}`)];
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return [
+      [],
+      new Error(`Failed to fetch RSS from ${source.name}: ${errorMessage}`),
+    ];
   }
 }
 
@@ -160,7 +165,7 @@ export async function fetchMultipleSources(
   concurrency = 5
 ): Promise<Map<string, [CreateArticleInput[], Error | null]>> {
   const results = new Map<string, [CreateArticleInput[], Error | null]>();
-  
+
   // Process in batches to respect concurrency limit
   for (let i = 0; i < sources.length; i += concurrency) {
     const batch = sources.slice(i, i + concurrency);
@@ -170,11 +175,11 @@ export async function fetchMultipleSources(
         return { sourceId: source.sourceId, result };
       })
     );
-    
+
     batchResults.forEach(({ sourceId, result }) => {
       results.set(sourceId, result);
     });
   }
-  
+
   return results;
 }

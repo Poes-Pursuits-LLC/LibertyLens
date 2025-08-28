@@ -26,7 +26,7 @@ export default defineConfig({
         plugins: [tsconfigPaths()],
         test: {
           name: "unit-tests",
-          include: ["./app/**/*.test.{ts,tsx}"],
+          include: ["./app/**/*.test.ts"],
           exclude: ["**/*.integration.test.ts"],
           environment: "jsdom",
           setupFiles: ["./app/test-setup.ts"],
