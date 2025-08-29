@@ -228,12 +228,46 @@ const markFetchFailure = async (sourceId: string, error: string) => {
 };
 
 const getActiveSourcesForFetching = async (limit = 50) => {
+  console.log("=== getActiveSourcesForFetching START ===");
+  console.log(`Querying database for active sources with limit: ${limit}`);
+
   const { data } = await DynamoNewsSource()
     .find({ isActive: true })
     .go({ limit });
 
+  console.log(
+    `Database query returned ${data.length} sources with isActive: true`
+  );
+  console.log("Database results before reliability filtering:");
+  data.forEach((source, index) => {
+    console.log(`DB source ${index + 1}:`, {
+      sourceId: source.sourceId,
+      name: source.name,
+      isActive: source.isActive,
+      reliabilityScore: source.reliability?.score,
+      failureCount: source.reliability?.failureCount,
+      category: source.category,
+    });
+  });
+
   const activeSources = data.filter((s: any) => s?.reliability?.score >= 50);
 
+  console.log(
+    `After reliability filtering (score >= 50): ${activeSources.length} sources`
+  );
+  console.log("Sources after reliability filtering:");
+  activeSources.forEach((source, index) => {
+    console.log(`Filtered source ${index + 1}:`, {
+      sourceId: source.sourceId,
+      name: source.name,
+      isActive: source.isActive,
+      reliabilityScore: source.reliability?.score,
+      failureCount: source.reliability?.failureCount,
+      category: source.category,
+    });
+  });
+
+  console.log("=== getActiveSourcesForFetching END ===");
   return activeSources;
 };
 

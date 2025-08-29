@@ -17,7 +17,7 @@ export default $config({
     };
   },
   async run() {
-    // const isProduction = Boolean($app.stage === "production");
+    const isProduction = Boolean($app.stage === "production");
 
     const secret = {
       WebUrl: new sst.Secret("WebUrl"),
@@ -48,7 +48,7 @@ export default $config({
     });
 
     new sst.aws.Cron("FetchNewsCron", {
-      schedule: "rate(5 minutes)",
+      schedule: isProduction ? "rate(1 day)" : "rate(1 day)",
       job: {
         handler: "app/functions/fetch-news.handler",
         link: [...Object.values(secret), table],

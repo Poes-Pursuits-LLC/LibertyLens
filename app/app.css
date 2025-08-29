@@ -80,9 +80,9 @@ html {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(255 255 255 / 0.02)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
 }
 
-/* --- Minimal theme tokens and landing-scoped helpers --- */
+/* --- Minimal theme tokens and global helpers --- */
 :root {
-  /* light defaults */
+  /* light defaults - clean and accessible */
   --accent: oklch(61% 0.18 263);
   --accent-contrast: oklch(98% 0.01 260);
   --surface: oklch(98% 0.01 260);
@@ -90,6 +90,7 @@ html {
   --text: oklch(20% 0.01 260);
   --muted: oklch(55% 0.02 260);
   --shadow-soft: 0 1px 1px color-mix(in oklab, black 10%, transparent), 0 2px 6px color-mix(in oklab, black 8%, transparent);
+  --border: color-mix(in oklab, var(--text) 10%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -100,6 +101,7 @@ html {
     --muted: oklch(70% 0.02 260);
     --accent: oklch(70% 0.16 263);
     --accent-contrast: oklch(12% 0.01 260);
+    --border: color-mix(in oklab, var(--text) 12%, transparent);
   }
 }
 
@@ -120,28 +122,23 @@ html {
   }
 }
 
-/* Landing-only helpers */
-[data-landing] {
-  /* Force dark mode tokens for landing */
-  color-scheme: dark;
-  --surface: oklch(16% 0.02 260);
-  --surface-2: oklch(20% 0.02 260);
-  --text: oklch(96% 0.01 260);
-  --muted: oklch(75% 0.02 260);
-  --accent: oklch(70% 0.16 263);
-  --accent-contrast: oklch(12% 0.01 260);
-}
-[data-landing] .soft-card {
-  /* Solid surface background to avoid translucency washout */
+/* Global helper classes */
+.soft-card {
   background: var(--surface);
-  border: 1px solid color-mix(in oklab, var(--text) 12%, transparent);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow-soft);
+  border-radius: 0.75rem;
 }
-/* Ensure all headings use strong text color */
-[data-landing] h1,[data-landing] h2,[data-landing] h3 { color: var(--text); }
-[data-landing] .muted { color: var(--muted); }
-[data-landing] .accent { color: var(--accent); }
-[data-landing] .btn-minimal {
+
+.muted { 
+  color: var(--muted); 
+}
+
+.accent { 
+  color: var(--accent); 
+}
+
+.btn-minimal {
   background: var(--text);
   color: var(--accent-contrast);
   border-radius: 0.75rem;
@@ -149,10 +146,14 @@ html {
   box-shadow: var(--shadow-soft);
   transition: transform 300ms, box-shadow 300ms, background-color 300ms, color 300ms;
 }
-[data-landing] .btn-minimal:hover {
+
+.btn-minimal:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 10px color-mix(in oklab, black 10%, transparent);
+  box-shadow: 0 2px 10px color-mix(in oklab, black 15%, transparent);
 }
+
 @media (prefers-reduced-motion: reduce) {
-  [data-landing] .btn-minimal:hover { transform: none; }
+  .btn-minimal:hover { 
+    transform: none; 
+  }
 }

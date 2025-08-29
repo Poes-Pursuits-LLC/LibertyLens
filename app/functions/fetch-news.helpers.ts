@@ -23,19 +23,49 @@ export interface FetchSummary {
 }
 
 // Derive and normalize fetch params from the incoming event
-export function parseFetchParams(event: any): { limit: number; concurrency: number } {
+export function parseFetchParams(event: any): {
+  limit: number;
+  concurrency: number;
+} {
   const limitRaw = event?.limit ?? 50;
   const concurrencyRaw = event?.concurrency ?? 5;
-  const limit = typeof limitRaw === "string" ? Number(limitRaw) : Number(limitRaw);
+  const limit =
+    typeof limitRaw === "string" ? Number(limitRaw) : Number(limitRaw);
   const concurrency =
-    typeof concurrencyRaw === "string" ? Number(concurrencyRaw) : Number(concurrencyRaw);
-  return { limit: Number.isFinite(limit) ? limit : 50, concurrency: Number.isFinite(concurrency) ? concurrency : 5 };
+    typeof concurrencyRaw === "string"
+      ? Number(concurrencyRaw)
+      : Number(concurrencyRaw);
+  return {
+    limit: Number.isFinite(limit) ? limit : 50,
+    concurrency: Number.isFinite(concurrency) ? concurrency : 5,
+  };
 }
 
 // Fetch active sources (seeding defaults first) respecting a limit
 export async function fetchActiveSources(limit: number): Promise<NewsSource[]> {
+  console.log("=== fetchActiveSources START ===");
+  console.log("Initializing default sources...");
+
   await newsSourceService.initializeDefaultSources();
+  console.log("Default sources initialized");
+
+  console.log(`Fetching active sources with limit: ${limit}`);
   const sources = await newsSourceService.getActiveSourcesForFetching(limit);
+
+  console.log(`Raw sources returned from database: ${sources.length}`);
+  console.log("Raw source details:");
+  sources.forEach((source, index) => {
+    console.log(`Raw source ${index + 1}:`, {
+      sourceId: source.sourceId,
+      name: source.name,
+      isActive: source.isActive,
+      reliabilityScore: source.reliability?.score,
+      failureCount: source.reliability?.failureCount,
+      category: source.category,
+    });
+  });
+
+  console.log("=== fetchActiveSources END ===");
   return sources as NewsSource[];
 }
 
@@ -54,7 +84,10 @@ export async function processSource(source: NewsSource): Promise<FetchResult> {
 
     if (fetchError) {
       result.error = fetchError.message;
-      await newsSourceService.recordFetchFailure(source.sourceId, fetchError.message);
+      await newsSourceService.recordFetchFailure(
+        source.sourceId,
+        fetchError.message
+      );
       return result;
     }
 
@@ -68,7 +101,10 @@ export async function processSource(source: NewsSource): Promise<FetchResult> {
 
       if (saveError) {
         result.error = saveError.message;
-        await newsSourceService.recordFetchFailure(source.sourceId, saveError.message);
+        await newsSourceService.recordFetchFailure(
+          source.sourceId,
+          saveError.message
+        );
         return result;
       }
 
@@ -80,7 +116,8 @@ export async function processSource(source: NewsSource): Promise<FetchResult> {
 
     return result;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     result.error = errorMessage;
     await newsSourceService.recordFetchFailure(source.sourceId, errorMessage);
     return result;
@@ -96,7 +133,9 @@ export async function runInBatches<T, R>(
   const results: R[] = [];
   for (let i = 0; i < items.length; i += concurrency) {
     const batch = items.slice(i, i + concurrency);
-    const batchResults = await Promise.all(batch.map((item, idx) => fn(item, i + idx)));
+    const batchResults = await Promise.all(
+      batch.map((item, idx) => fn(item, i + idx))
+    );
     results.push(...batchResults);
   }
   return results;

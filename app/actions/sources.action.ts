@@ -236,12 +236,17 @@ async function createFeedFromSources(formData: FormData) {
     const selected = JSON.parse(String(formData.get("selectedSourceIds"))) as string[];
 
     const res = await client.feeds.createFeed.$post({
-      json: { userId, name, description, sources: selected },
+      json: { 
+        userId, 
+        name, 
+        description, 
+        sources: selected 
+      },
     });
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      return { error: (err as any).error || "Failed to create feed" };
+      return { error: (err as any).error || (err as any).message || "Failed to create feed" };
     }
 
     const data = await res.json();
