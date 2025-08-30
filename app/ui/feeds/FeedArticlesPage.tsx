@@ -93,7 +93,7 @@ export function FeedArticlesPage({ loaderData, actionData }: FeedArticlesPagePro
         <>
           <div className="space-y-4">
             {articles.map((a: any, index: number) => (
-              <Card key={`${a.articleId}-${index}`} className="p-6 hover:shadow-md transition-shadow">
+              <Card key={`${a.id ?? a.articleId ?? a.originalUrl ?? index}-${index}`} className="p-6 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <a

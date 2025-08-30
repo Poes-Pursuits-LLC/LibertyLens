@@ -39,7 +39,7 @@ describe('feed-articles.loader', () => {
 
     mockedHc.mockReturnValue({
       feeds: { getFeed: { $get: feedsGet } },
-      articles: { $get: articlesGet },
+      articles: { feed: { [":feedId"]: { $get: articlesGet } } },
     } as any)
 
     const args = { params: { feedId: 'f1' }, request: new Request('http://localhost/dashboard/feeds/f1') } as any
@@ -47,7 +47,7 @@ describe('feed-articles.loader', () => {
 
     expect(mockedHc).toHaveBeenCalledWith(process.env.SERVER_URL)
     expect(feedsGet).toHaveBeenCalledWith({ query: { feedId: 'f1', userId: 'user-1' } })
-    expect(articlesGet).toHaveBeenCalledWith({ query: { feedId: 'f1', userId: 'user-1', limit: 20 } })
+    expect(articlesGet).toHaveBeenCalledWith({ param: { feedId: 'f1' }, query: { userId: 'user-1', limit: '10' } })
     expect(result.feed).toEqual(feed)
     expect(result.articles).toEqual(articles)
     expect(result.nextCursor).toBe('next')
@@ -60,7 +60,7 @@ describe('feed-articles.loader', () => {
 
     mockedHc.mockReturnValue({
       feeds: { getFeed: { $get: feedsGet } },
-      articles: { $get: articlesGet },
+      articles: { feed: { [":feedId"]: { $get: articlesGet } } },
     } as any)
 
     const args = { params: { feedId: 'f1' }, request: new Request('http://localhost/dashboard/feeds/f1') } as any

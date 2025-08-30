@@ -9,6 +9,8 @@ import { articleService } from "~/core/article/article.service";
 import { feedService } from "~/core/feed/feed.service";
 import { handleAsync } from "~/core/utils/helpers";
 import { HTTPException } from "hono/http-exception";
+import { feedReaderService } from "~/core/feed/feed-reader.service";
+import { FEED_EPHEMERAL_DEFAULT_LIMIT, MAX_AGGREGATION_LIMIT } from "~/core/feed/feed.constants";
 
 const articleSearchQuerySchema = z.object({
   sourceId: z.string().optional(),
@@ -36,6 +38,7 @@ const feedQuerySchema = z.object({
   userId: z.string().optional(),
   limit: z.coerce.number().min(1).max(100).optional(),
   cursor: z.string().optional(),
+  refresh: z.coerce.boolean().optional(),
 });
 
 const articleParamSchema = z.object({ articleId: z.string() });
@@ -72,12 +75,11 @@ export const articleRouter = new Hono()
       sourceIds = (feed.sources || []).map((source: any) =>
         typeof source === "string" ? source : source.sourceId
       );
-      console.info(JSON.stringify(feed, null, 2));
     }
 
     let articles: Article[] = [];
     let nextCursor: string | null = null;
-    const requestedLimit = params.limit || 10;
+    const requestedLimit = params.limit || 20;
 
     // Handle different source configurations
     if (params.sourceId) {
@@ -238,14 +240,16 @@ export const articleRouter = new Hono()
     zValidator("query", feedQuerySchema),
     async (c) => {
       const { feedId } = c.req.valid("param");
-      const { userId, limit = 10, cursor } = c.req.valid("query");
+      const { userId, limit, cursor, refresh } = c.req.valid("query");
       console.info("Invoked articleRouter.get '/feed/:feedId' with", {
         feedId,
         userId,
         limit,
         cursor,
+        refresh,
       });
 
+      // Verify feed exists and ownership when userId provided
       const [feed, feedError] = await handleAsync(
         feedService.getFeedById(feedId)
       );
@@ -261,84 +265,24 @@ export const articleRouter = new Hono()
         });
       }
 
-      console.info(JSON.stringify(feed, null, 2));
-
-      let articles: Article[] = [];
-      let nextCursor: string | null = null;
-
-      if (feed.sources.length > 0) {
-        // Extract source IDs from feed sources
-        const sourceIds = feed.sources.map((source: any) =>
-          typeof source === "string" ? source : source.sourceId
-        );
-
-        if (sourceIds.length === 1) {
-          // Single source - use the optimized getArticlesBySource
-          const [result, error] = await articleService.getArticlesBySource(
-            sourceIds[0],
-            undefined,
-            undefined,
-            cursor,
-            limit
-          );
-          if (error) {
-            throw new HTTPException(500, {
-              message: "Failed to fetch articles",
-            });
-          }
-          if (result) {
-            articles = result.articles;
-            nextCursor = result.cursor;
-          }
-        } else {
-          // Multiple sources - fetch from all sources and merge
-          // Note: This approach fetches from all sources in parallel
-          const promises = sourceIds.map((sourceId: string) =>
-            articleService.getArticlesBySource(
-              sourceId,
-              undefined,
-              undefined,
-              undefined, // No cursor for individual sources
-              Math.ceil(limit / sourceIds.length) + 1 // Distribute limit across sources
-            )
-          );
-
-          const results = await Promise.all(promises);
-          const allArticles: Article[] = [];
-
-          for (const [result, error] of results) {
-            if (error) {
-              console.error("Error fetching from source:", error);
-              continue;
-            }
-            if (result) {
-              allArticles.push(...result.articles);
-            }
-          }
-
-          // Sort all articles by publishedAt (newest first) and apply limit
-          allArticles.sort(
-            (a, b) =>
-              new Date(b.publishedAt).getTime() -
-              new Date(a.publishedAt).getTime()
-          );
-
-          // Apply pagination manually
-          const startIndex = cursor ? parseInt(cursor, 10) : 0;
-          articles = allArticles.slice(startIndex, startIndex + limit);
-
-          // Set next cursor if there are more articles
-          if (allArticles.length > startIndex + limit) {
-            nextCursor = String(startIndex + limit);
-          }
-        }
+      // Ephemeral aggregation via live RSS + 5-min cache
+      const [agg, aggErr] = await handleAsync(
+        feedReaderService.getAggregatedFeedItems(feedId, {
+          userId,
+          limit: Math.min(limit ?? FEED_EPHEMERAL_DEFAULT_LIMIT, MAX_AGGREGATION_LIMIT),
+          cursor,
+          forceRefresh: refresh === true,
+        })
+      );
+      if (aggErr) {
+        throw new HTTPException(500, { message: "Failed to fetch articles" });
       }
 
       return c.json({
-        articles,
+        articles: agg!.articles,
         feedId,
-        nextCursor,
-        hasMore: nextCursor !== null,
+        nextCursor: agg!.nextCursor || null,
+        hasMore: agg!.hasMore,
       });
     }
   )

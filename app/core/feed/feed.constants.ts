@@ -1,0 +1,4 @@
+export const FEED_EPHEMERAL_TTL_MINUTES = Number(process.env.FEED_EPHEMERAL_TTL_MINUTES) || 5
+export const FEED_EPHEMERAL_DEFAULT_LIMIT = 10
+export const MAX_AGGREGATION_LIMIT = 50
+
