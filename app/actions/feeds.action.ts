@@ -21,7 +21,7 @@ export const feedsAction = async (args: Route.ActionArgs) => {
       }
 
       const client = hc<AppType>(process.env.SERVER_URL!)
-      const res = await client.feeds.deleteFeed.$delete({
+      const res = await (client.feeds as any).deleteFeed.$delete({
         query: { feedId, userId },
       })
 
@@ -82,7 +82,7 @@ export const feedsAction = async (args: Route.ActionArgs) => {
       }
 
       const client = hc<AppType>(process.env.SERVER_URL!)
-      const res = await client.feeds.createFeed.$post({ json: payload })
+      const res = await (client.feeds as any).createFeed.$post({ json: payload })
       if (!res.ok) {
         // Try to read error body
         let message = "Failed to create feed"

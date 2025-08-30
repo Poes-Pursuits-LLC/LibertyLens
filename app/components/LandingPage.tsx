@@ -1,4 +1,3 @@
-import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Link } from "react-router";
 import { Spotlight as MinimalSpotlight } from "./../components/effects/Spotlight";
@@ -7,14 +6,12 @@ import { TextGenerateEffect } from "./ui/aceternity/text-generate-effect";
 import { BentoGrid, BentoGridItem } from "./ui/aceternity/bento-grid";
 import { InfiniteMovingCards } from "./ui/aceternity/infinite-moving-cards";
 import { BackgroundBeams } from "./ui/aceternity/background-beams";
-import { MovingBorderButton } from "./ui/aceternity/moving-border";
 import { FloatingElements } from "./ui/aceternity/floating-elements";
 import { ShimmerBorder } from "./ui/aceternity/shimmer-border";
 import { GradientBlur } from "./ui/aceternity/gradient-blur";
 import { TypewriterEffect } from "./ui/aceternity/typewriter-effect";
 import { GradientHeading } from "./ui/aceternity/gradient-heading";
 import { MotionCard } from "./ui/aceternity/motion-card";
-import { motion } from "framer-motion";
 
 export function LandingPage() {
   const testimonials = [
@@ -64,13 +61,17 @@ export function LandingPage() {
               <h1 className="text-xl font-semibold tracking-tight">Liberty Lens</h1>
             </div>
             <div className="flex items-center gap-3">
-              <Link to="/login">
-                <Button variant="ghost" size="sm" className="hover:bg-[var(--surface-2)]">
-                  Sign In
-                </Button>
+              <Link 
+                to="/login" 
+                className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md border border-transparent hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
+              >
+                Sign In
               </Link>
-              <Link to="/login" className="inline-flex">
-                <span className="btn-minimal focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Get Started</span>
+              <Link 
+                to="/login" 
+                className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent)]/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
+              >
+                Get Started
               </Link>
             </div>
           </div>
@@ -106,26 +107,19 @@ export function LandingPage() {
               className="mt-5 text-base md:text-lg leading-7 muted"
             />
             <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-              <Link to="/login" className="inline-flex">
-                <MovingBorderButton
-                  borderRadius="0.75rem"
-                  className="bg-[var(--text)] text-[var(--accent-contrast)] px-6 py-3 font-medium"
-                  containerClassName="bg-transparent"
-                  borderClassName="bg-gradient-to-r from-[var(--accent)] to-blue-500"
-                  duration={3000}
-                >
-                  Start Free Trial
-                </MovingBorderButton>
+              <Link 
+                to="/login" 
+                className="inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent)]/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
+              >
+                Start Free Trial
               </Link>
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="border-black/15 hover:bg-[var(--surface-2)] backdrop-blur"
+              <Link 
+                to="#demo"
+                className="inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-xl border border-black/15 bg-transparent hover:bg-[var(--surface-2)] transition-colors backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
                 aria-label="Watch demo"
               >
                 Watch Demo
-              </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -331,21 +325,17 @@ export function LandingPage() {
             Stop consuming pre-packaged opinions. Start thinking independently with tools built for free minds.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/login" className="inline-flex">
-              <MovingBorderButton
-                borderRadius="0.75rem"
-                className="bg-[var(--text)] text-[var(--accent-contrast)] px-8 py-3 font-medium"
-                containerClassName="bg-transparent"
-                borderClassName="bg-gradient-to-r from-[var(--accent)] to-blue-500"
-                duration={3000}
-              >
-                Start Free Trial
-              </MovingBorderButton>
+            <Link 
+              to="/login" 
+              className="inline-flex items-center justify-center px-8 py-3 text-base font-medium rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent)]/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
+            >
+              Start Free Trial
             </Link>
-            <Link to="/login">
-              <Button size="lg" variant="outline" className="border-black/15 hover:bg-[var(--surface)] backdrop-blur">
-                Sign In
-              </Button>
+            <Link 
+              to="/login"
+              className="inline-flex items-center justify-center px-8 py-3 text-base font-medium rounded-xl border border-black/15 bg-transparent hover:bg-[var(--surface)] transition-colors backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
+            >
+              Sign In
             </Link>
           </div>
           <p className="mt-4 text-sm muted">No contracts. No censorship. Your mind, your choice.</p>

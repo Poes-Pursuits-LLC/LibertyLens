@@ -7,6 +7,10 @@ import {
   ClockIcon,
   PlusCircleIcon,
   ArrowRightIcon,
+  DocumentTextIcon,
+  GlobeAltIcon,
+  CheckCircleIcon,
+  PlayCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Card } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -21,123 +25,173 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
-// Mock data for demo
-const stats = [
-  { name: "Active Feeds", value: 3, icon: RssIcon, change: "+1 this week" },
+const gettingStartedItems = [
+  {
+    id: "create-feed",
+    title: "Create a Feed",
+    description:
+      "Set up your first custom news feed with topics you care about",
+    completed: false,
+    link: "/dashboard/feeds/new",
+    icon: RssIcon,
+  },
+  {
+    id: "daily-podcast",
+    title: "Listen to a Daily Summary Podcast",
+    description: "Get AI-generated audio summaries of your news",
+    completed: false,
+    link: "/dashboard/podcast",
+    icon: PlayCircleIcon,
+  },
+  {
+    id: "add-source",
+    title: "Add a Custom News Source",
+    description: "Follow trusted sources from across the political spectrum",
+    completed: false,
+    link: "/dashboard/sources",
+    icon: GlobeAltIcon,
+  },
+  {
+    id: "analyze-article",
+    title: "Analyze an Article",
+    description: "Get instant libertarian perspective on any news article",
+    completed: false,
+    link: "/dashboard/analyze",
+    icon: SparklesIcon,
+  },
+];
+
+const statsConfig = [
+  {
+    name: "Active Feeds",
+    icon: RssIcon,
+    description: "Custom news feeds you've created",
+  },
   {
     name: "Articles Analyzed",
-    value: 47,
     icon: NewspaperIcon,
-    change: "+12 today",
+    description: "Total articles processed through liberty lens",
   },
   {
     name: "Sources Following",
-    value: 8,
     icon: SparklesIcon,
-    change: "2 new available",
+    description: "News sources in your network",
   },
   {
     name: "Reading Time Saved",
-    value: "2.5h",
     icon: ClockIcon,
-    change: "This week",
-  },
-];
-
-const recentArticles = [
-  {
-    id: 1,
-    title: "Federal Reserve Announces Another Rate Hike",
-    source: "Wall Street Journal",
-    libertarianScore: 25,
-    sentiment: "critical" as const,
-    analyzedAt: "2 hours ago",
-    keyPoint: "Centralized monetary policy continues to distort market signals",
-  },
-  {
-    id: 2,
-    title: "New Privacy Bill Gains Bipartisan Support",
-    source: "TechCrunch",
-    libertarianScore: 75,
-    sentiment: "positive" as const,
-    analyzedAt: "4 hours ago",
-    keyPoint:
-      "Rare win for individual privacy rights against state surveillance",
-  },
-  {
-    id: 3,
-    title: "City Council Votes to Reduce Business Licensing Requirements",
-    source: "Local News Network",
-    libertarianScore: 90,
-    sentiment: "positive" as const,
-    analyzedAt: "6 hours ago",
-    keyPoint: "Removing barriers to entry promotes economic freedom",
-  },
-];
-
-const suggestedSources = [
-  {
-    id: 1,
-    name: "Reason Magazine",
-    description: "Libertarian news and commentary",
-    type: "libertarian",
-    image:
-      "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&h=300&fit=crop",
-  },
-  {
-    id: 2,
-    name: "Mises Institute",
-    description: "Austrian economics and libertarian political theory",
-    type: "economics",
-    image:
-      "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=300&fit=crop",
-  },
-  {
-    id: 3,
-    name: "Electronic Frontier Foundation",
-    description: "Digital privacy and civil liberties",
-    type: "privacy",
-    image:
-      "https://images.unsplash.com/photo-1563986768494-4dee2763ff3f?w=400&h=300&fit=crop",
+    description: "Time saved with AI summaries",
   },
 ];
 
 export default function Dashboard() {
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Welcome back, John</h1>
+        <h1 className="text-3xl font-bold text-gray-900">
+          Welcome to Liberty Lens
+        </h1>
         <p className="mt-2 text-gray-600">
-          Here's your liberty-focused news analysis for today
+          Your personalized dashboard for liberty-focused news analysis
         </p>
       </div>
 
-      {/* Stats Grid */}
+      <Card className="p-6">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Getting Started
+          </h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Complete these steps to get the most out of Liberty Lens
+          </p>
+        </div>
+        <div className="space-y-3">
+          {gettingStartedItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={item.id}
+                className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex-shrink-0 mt-0.5">
+                  {item.completed ? (
+                    <CheckCircleIcon className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <Link to={item.link} className="group">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-4 w-4 text-gray-400" />
+                      <h3 className="text-sm font-medium text-gray-900 group-hover:text-blue-600">
+                        {item.title}
+                      </h3>
+                    </div>
+                    <p className="mt-0.5 text-sm text-gray-500">
+                      {item.description}
+                    </p>
+                  </Link>
+                </div>
+                <Link to={item.link} className="flex-shrink-0">
+                  <Button size="sm" variant="ghost" className="text-xs">
+                    {item.completed ? "View" : "Start"}
+                  </Button>
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">
+              Progress: 0 of {gettingStartedItems.length} completed
+            </span>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-2 bg-gray-200 rounded-full w-24">
+                <div
+                  className="h-2 bg-blue-600 rounded-full transition-all duration-300"
+                  style={{ width: "0%" }}
+                />
+              </div>
+              <span className="text-sm font-medium text-gray-700">0%</span>
+            </div>
+          </div>
+        </div>
+      </Card>
+
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
+        {statsConfig.map((stat) => {
           const Icon = stat.icon;
           return (
             <Card
               key={stat.name}
               className="px-4 py-5 sm:p-6 hover:shadow-md transition-shadow"
             >
-              <dt className="flex items-center gap-x-3 text-sm font-medium text-gray-600">
-                <Icon className="h-5 w-5 text-blue-600" aria-hidden="true" />
-                {stat.name}
-              </dt>
-              <dd className="mt-2 flex items-baseline justify-between">
-                <div className="text-2xl font-semibold text-gray-900">
-                  {stat.value}
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <dt className="flex items-center gap-x-3 text-sm font-medium text-gray-600">
+                    <Icon
+                      className="h-5 w-5 text-blue-600"
+                      aria-hidden="true"
+                    />
+                    {stat.name}
+                  </dt>
+                  <dd className="mt-2">
+                    <div className="text-2xl font-semibold text-gray-400">
+                      —
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {stat.description}
+                    </div>
+                  </dd>
                 </div>
-                <div className="text-sm text-gray-600">{stat.change}</div>
-              </dd>
+              </div>
             </Card>
           );
         })}
       </div>
 
-      {/* Recent Articles */}
       <div>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
@@ -147,53 +201,38 @@ export default function Dashboard() {
             to="/dashboard/feeds"
             className="text-blue-600 hover:underline flex items-center gap-1"
           >
-            View all
+            View all feeds
             <ArrowRightIcon className="h-4 w-4" />
           </Link>
         </div>
-        <div className="space-y-4">
-          {recentArticles.map((article) => (
-            <Card
-              key={article.id}
-              className="p-6 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    {article.title}
-                  </h3>
-                  <div className="mt-1 flex items-center gap-x-4 text-sm text-gray-600">
-                    <span>{article.source}</span>
-                    <span>•</span>
-                    <span>{article.analyzedAt}</span>
-                  </div>
-                  <p className="mt-2 text-sm text-gray-700">
-                    {article.keyPoint}
-                  </p>
-                </div>
-                <div className="ml-4 flex flex-col items-center">
-                  <div
-                    className={`text-2xl font-bold ${
-                      article.libertarianScore >= 70
-                        ? "text-green-600"
-                        : article.libertarianScore >= 40
-                          ? "text-yellow-600"
-                          : "text-red-600"
-                    }`}
-                  >
-                    {article.libertarianScore}
-                  </div>
-                  <div className="text-xs text-gray-600">Liberty Score</div>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+        <Card className="p-8">
+          <div className="text-center">
+            <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No Articles Analyzed Yet
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Your analyzed articles will appear here. Each article will show:
+            </p>
+            <ul className="text-sm text-gray-500 space-y-1">
+              <li>• Liberty Score (0-100) based on libertarian principles</li>
+              <li>• Key insights and bias analysis</li>
+              <li>• Source credibility assessment</li>
+              <li>• Timestamps and quick summaries</li>
+            </ul>
+            <div className="mt-6">
+              <Link to="/dashboard/analyze">
+                <Button size="sm">
+                  <SparklesIcon className="h-4 w-4 mr-2" />
+                  Analyze Your First Article
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </Card>
       </div>
 
-      {/* Quick Actions */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {/* Create New Feed */}
         <Card className="p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             Create a New Feed
@@ -210,7 +249,6 @@ export default function Dashboard() {
           </Link>
         </Card>
 
-        {/* Quick Analyze */}
         <Card className="p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             Analyze Any Article
@@ -227,45 +265,65 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Suggested Sources with Full Background Images */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">
-          Suggested Sources
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {suggestedSources.map((source) => (
-            <Card
-              key={source.id}
-              className="relative overflow-hidden h-64 group hover:shadow-lg transition-shadow"
-            >
-              {/* Full background image */}
-              <img
-                src={source.image}
-                alt={source.name}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-
-              {/* Content */}
-              <div className="relative h-full flex flex-col justify-end p-6 text-white">
-                <h3 className="text-xl font-bold mb-2">{source.name}</h3>
-                <p className="text-sm text-gray-200 mb-4">
-                  {source.description}
-                </p>
-                <Link to="/dashboard/sources" className="inline-block">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="bg-white/90 hover:bg-white text-gray-900"
-                  >
-                    Add to Feeds
-                  </Button>
-                </Link>
-              </div>
-            </Card>
-          ))}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Discover Sources
+          </h2>
+          <Link
+            to="/dashboard/sources"
+            className="text-blue-600 hover:underline flex items-center gap-1"
+          >
+            Browse all sources
+            <ArrowRightIcon className="h-4 w-4" />
+          </Link>
         </div>
+        <Card className="p-8">
+          <div className="text-center">
+            <GlobeAltIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No Sources Added Yet
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Discover and follow news sources from across the political
+              spectrum. Available source categories include:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 text-left max-w-2xl mx-auto">
+              <div className="space-y-2">
+                <h4 className="font-medium text-gray-700">Libertarian</h4>
+                <ul className="text-sm text-gray-500 space-y-1">
+                  <li>• Reason Magazine</li>
+                  <li>• Mises Institute</li>
+                  <li>• Liberty Fund</li>
+                </ul>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-medium text-gray-700">Mainstream</h4>
+                <ul className="text-sm text-gray-500 space-y-1">
+                  <li>• Reuters</li>
+                  <li>• BBC News</li>
+                  <li>• Associated Press</li>
+                </ul>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-medium text-gray-700">Alternative</h4>
+                <ul className="text-sm text-gray-500 space-y-1">
+                  <li>• The Intercept</li>
+                  <li>• Zero Hedge</li>
+                  <li>• Ars Technica</li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-6">
+              <Link to="/dashboard/sources">
+                <Button size="sm">
+                  <GlobeAltIcon className="h-4 w-4 mr-2" />
+                  Browse Sources
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );

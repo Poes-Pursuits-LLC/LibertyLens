@@ -141,13 +141,14 @@ const getArticlesBySource = async (
   startDate?: string,
   endDate?: string,
   cursor?: string,
-  limit = 20
+  limit = 10
 ): Promise<[{ articles: Article[]; cursor: string | null }, any]> => {
   try {
     let query = DynamoArticle().query.bySource({ sourceId });
 
-    const result = await query
-      .where((attr, op) => {
+    // Only apply where clause if there are date filters
+    if (startDate || endDate) {
+      query = query.where((attr, op) => {
         if (startDate && endDate) {
           return op.between(attr.publishedAt, startDate, endDate);
         } else if (startDate) {
@@ -155,12 +156,15 @@ const getArticlesBySource = async (
         } else if (endDate) {
           return op.lte(attr.publishedAt, endDate);
         }
-        return op.eq(attr.publishedAt, attr.publishedAt);
-      })
-      .go({
-        limit,
-        cursor: cursor ? cursor : undefined,
+        // This should never be reached due to the outer if condition
+        return true;
       });
+    }
+
+    const result = await query.go({
+      limit,
+      cursor: cursor ? cursor : undefined,
+    });
 
     return [
       {
@@ -184,7 +188,7 @@ const getArticlesBySource = async (
 const getRecentArticles = async (
   hours = 24,
   cursor?: string,
-  limit = 20
+  limit = 10
 ): Promise<[{ articles: Article[]; cursor: string | null }, any]> => {
   try {
     const startDate = new Date(
@@ -222,15 +226,17 @@ const searchArticles = async (
   params: ArticleSearchParams
 ): Promise<[{ articles: Article[]; cursor: string | null }, any]> => {
   try {
-    const { sourceId, tags, startDate, endDate, cursor, limit = 20 } = params;
+    const { sourceId, tags, startDate, endDate, cursor, limit = 10 } = params;
 
     if (sourceId) {
       return getArticlesBySource(sourceId, startDate, endDate, cursor, limit);
     }
 
-    const result = await DynamoArticle()
-      .find({ type: "article" })
-      .where((attr, op) => {
+    let query = DynamoArticle().find({ type: "article" });
+
+    // Only apply where clause if there are date filters
+    if (startDate || endDate) {
+      query = query.where((attr, op) => {
         if (startDate && endDate) {
           return op.between(attr.publishedAt, startDate, endDate);
         } else if (startDate) {
@@ -238,12 +244,15 @@ const searchArticles = async (
         } else if (endDate) {
           return op.lte(attr.publishedAt, endDate);
         }
-        return op.eq(attr.publishedAt, attr.publishedAt);
-      })
-      .go({
-        limit,
-        cursor: cursor ? cursor : undefined,
+        // This should never be reached due to the outer if condition
+        return true;
       });
+    }
+
+    const result = await query.go({
+      limit,
+      cursor: cursor ? cursor : undefined,
+    });
 
     let filteredArticles = (result.data || []) as Article[];
     if (tags && tags.length > 0) {

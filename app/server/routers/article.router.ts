@@ -1,13 +1,15 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import type { Article, ArticleSearchParams } from "~/core/article/article.model";
+import type {
+  Article,
+  ArticleSearchParams,
+} from "~/core/article/article.model";
 import { articleService } from "~/core/article/article.service";
 import { feedService } from "~/core/feed/feed.service";
 import { handleAsync } from "~/core/utils/helpers";
 import { HTTPException } from "hono/http-exception";
 
-// Validation schemas (query/params/json)
 const articleSearchQuerySchema = z.object({
   sourceId: z.string().optional(),
   feedId: z.string().optional(),
@@ -41,18 +43,18 @@ const userIdBodySchema = z.object({ userId: z.string().min(1) });
 const userIdQuerySchema = z.object({ userId: z.string().min(1) });
 
 export const articleRouter = new Hono()
-  // Search/list articles
   .get("/", zValidator("query", articleSearchQuerySchema), async (c) => {
     const params = c.req.valid("query");
     console.info("Invoked articleRouter.get '/' with params:", params);
 
-    // Resolve tags to array (accept comma-separated string or string[])
     let tagsArray: string[] | undefined;
     if (Array.isArray(params.tags)) tagsArray = params.tags;
     else if (typeof params.tags === "string")
-      tagsArray = params.tags.split(",").map((t) => t.trim()).filter(Boolean);
+      tagsArray = params.tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
 
-    // If feedId is specified, fetch feed and derive sourceIds
     let sourceIds: string[] | undefined;
     if (params.feedId) {
       const [feed, feedError] = await handleAsync(
@@ -70,33 +72,118 @@ export const articleRouter = new Hono()
       sourceIds = (feed.sources || []).map((source: any) =>
         typeof source === "string" ? source : source.sourceId
       );
+      console.info(JSON.stringify(feed, null, 2));
     }
 
-    // Build search parameters
-    const searchParams: ArticleSearchParams = {
-      sourceId:
-        params.sourceId ||
-        (sourceIds && sourceIds.length === 1 ? sourceIds[0] : undefined),
-      tags: tagsArray,
-      startDate: params.startDate,
-      endDate: params.endDate,
-      cursor: params.cursor,
-      limit: params.limit || 20,
-    };
+    let articles: Article[] = [];
+    let nextCursor: string | null = null;
+    const requestedLimit = params.limit || 10;
 
-    const [result, error] = await articleService.searchArticles(searchParams);
-    if (error) {
-      throw new HTTPException(500, { message: "Failed to fetch articles" });
-    }
+    // Handle different source configurations
+    if (params.sourceId) {
+      // Single source specified directly
+      const searchParams: ArticleSearchParams = {
+        sourceId: params.sourceId,
+        tags: tagsArray,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        cursor: params.cursor,
+        limit: requestedLimit,
+      };
+      const [result, error] = await articleService.searchArticles(searchParams);
+      if (error) {
+        throw new HTTPException(500, { message: "Failed to fetch articles" });
+      }
+      if (result) {
+        articles = result.articles;
+        nextCursor = result.cursor;
+      }
+    } else if (sourceIds && sourceIds.length === 1) {
+      // Single source from feed
+      const searchParams: ArticleSearchParams = {
+        sourceId: sourceIds[0],
+        tags: tagsArray,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        cursor: params.cursor,
+        limit: requestedLimit,
+      };
+      const [result, error] = await articleService.searchArticles(searchParams);
+      if (error) {
+        throw new HTTPException(500, { message: "Failed to fetch articles" });
+      }
+      if (result) {
+        articles = result.articles;
+        nextCursor = result.cursor;
+      }
+    } else if (sourceIds && sourceIds.length > 1) {
+      // Multiple sources from feed - fetch from each and merge
+      const promises = sourceIds.map((sourceId: string) =>
+        articleService.getArticlesBySource(
+          sourceId,
+          params.startDate,
+          params.endDate,
+          undefined, // No cursor for individual sources in parallel fetch
+          Math.ceil(requestedLimit / sourceIds.length) + 1 // Distribute limit
+        )
+      );
 
-    if (!result) {
-      return c.json({ articles: [], nextCursor: null, hasMore: false });
-    }
+      const results = await Promise.all(promises);
+      const allArticles: Article[] = [];
 
-    // If multiple source IDs from feed, filter results
-    let articles = result.articles;
-    if (sourceIds && sourceIds.length > 1) {
-      articles = articles.filter((a) => sourceIds!.includes(a.sourceId));
+      for (const [result, error] of results) {
+        if (error) {
+          console.error("Error fetching from source:", error);
+          continue;
+        }
+        if (result) {
+          allArticles.push(...result.articles);
+        }
+      }
+
+      // Apply tag filtering if needed
+      let filteredArticles = allArticles;
+      if (tagsArray && tagsArray.length > 0) {
+        filteredArticles = allArticles.filter((article) =>
+          tagsArray.some((tag) => article.tags.includes(tag))
+        );
+      }
+
+      // Sort by publishedAt (newest first)
+      filteredArticles.sort(
+        (a, b) =>
+          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+      );
+
+      // Apply pagination manually
+      const startIndex = params.cursor ? parseInt(params.cursor, 10) : 0;
+      articles = filteredArticles.slice(
+        startIndex,
+        startIndex + requestedLimit
+      );
+
+      // Set next cursor if there are more articles
+      if (filteredArticles.length > startIndex + requestedLimit) {
+        nextCursor = String(startIndex + requestedLimit);
+      }
+    } else {
+      // No specific sources - fetch all articles
+      const searchParams: ArticleSearchParams = {
+        tags: tagsArray,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        cursor: params.cursor,
+        limit: requestedLimit,
+      };
+      const [result, error] = await articleService.searchArticles(searchParams);
+      if (error) {
+        throw new HTTPException(500, { message: "Failed to fetch articles" });
+      }
+      if (result) {
+        articles = result.articles;
+        nextCursor = result.cursor;
+        console.info("ahhhh", articles.length);
+      }
     }
 
     // Post-process search term filtering if needed
@@ -111,14 +198,17 @@ export const articleRouter = new Hono()
 
     return c.json({
       articles,
-      nextCursor: result.cursor,
-      hasMore: result.cursor !== null,
+      nextCursor,
+      hasMore: nextCursor !== null,
     });
   })
   // Trending
   .get("/trending", zValidator("query", trendingQuerySchema), async (c) => {
     const { limit = 10, timeframe } = c.req.valid("query");
-    console.info("Invoked articleRouter.get '/trending' with", { limit, timeframe });
+    console.info("Invoked articleRouter.get '/trending' with", {
+      limit,
+      timeframe,
+    });
 
     let hours = 24;
     if (timeframe === "7d") hours = 24 * 7;
@@ -148,7 +238,7 @@ export const articleRouter = new Hono()
     zValidator("query", feedQuerySchema),
     async (c) => {
       const { feedId } = c.req.valid("param");
-      const { userId, limit = 20, cursor } = c.req.valid("query");
+      const { userId, limit = 10, cursor } = c.req.valid("query");
       console.info("Invoked articleRouter.get '/feed/:feedId' with", {
         feedId,
         userId,
@@ -156,7 +246,9 @@ export const articleRouter = new Hono()
         cursor,
       });
 
-      const [feed, feedError] = await handleAsync(feedService.getFeedById(feedId));
+      const [feed, feedError] = await handleAsync(
+        feedService.getFeedById(feedId)
+      );
       if (feedError) {
         throw new HTTPException(500, { message: "Failed to fetch feed" });
       }
@@ -164,30 +256,81 @@ export const articleRouter = new Hono()
         throw new HTTPException(404, { message: "Feed not found" });
       }
       if (userId && feed.userId !== userId) {
-        throw new HTTPException(404, { message: "Feed not found or unauthorized" });
+        throw new HTTPException(404, {
+          message: "Feed not found or unauthorized",
+        });
       }
+
+      console.info(JSON.stringify(feed, null, 2));
 
       let articles: Article[] = [];
       let nextCursor: string | null = null;
 
       if (feed.sources.length > 0) {
-        const firstSourceId =
-          typeof feed.sources[0] === "string"
-            ? (feed.sources[0] as unknown as string)
-            : (feed.sources[0] as any).sourceId;
-        const [result, error] = await articleService.getArticlesBySource(
-          firstSourceId,
-          undefined,
-          undefined,
-          cursor,
-          limit
+        // Extract source IDs from feed sources
+        const sourceIds = feed.sources.map((source: any) =>
+          typeof source === "string" ? source : source.sourceId
         );
-        if (error) {
-          throw new HTTPException(500, { message: "Failed to fetch articles" });
-        }
-        if (result) {
-          articles = result.articles;
-          nextCursor = result.cursor;
+
+        if (sourceIds.length === 1) {
+          // Single source - use the optimized getArticlesBySource
+          const [result, error] = await articleService.getArticlesBySource(
+            sourceIds[0],
+            undefined,
+            undefined,
+            cursor,
+            limit
+          );
+          if (error) {
+            throw new HTTPException(500, {
+              message: "Failed to fetch articles",
+            });
+          }
+          if (result) {
+            articles = result.articles;
+            nextCursor = result.cursor;
+          }
+        } else {
+          // Multiple sources - fetch from all sources and merge
+          // Note: This approach fetches from all sources in parallel
+          const promises = sourceIds.map((sourceId: string) =>
+            articleService.getArticlesBySource(
+              sourceId,
+              undefined,
+              undefined,
+              undefined, // No cursor for individual sources
+              Math.ceil(limit / sourceIds.length) + 1 // Distribute limit across sources
+            )
+          );
+
+          const results = await Promise.all(promises);
+          const allArticles: Article[] = [];
+
+          for (const [result, error] of results) {
+            if (error) {
+              console.error("Error fetching from source:", error);
+              continue;
+            }
+            if (result) {
+              allArticles.push(...result.articles);
+            }
+          }
+
+          // Sort all articles by publishedAt (newest first) and apply limit
+          allArticles.sort(
+            (a, b) =>
+              new Date(b.publishedAt).getTime() -
+              new Date(a.publishedAt).getTime()
+          );
+
+          // Apply pagination manually
+          const startIndex = cursor ? parseInt(cursor, 10) : 0;
+          articles = allArticles.slice(startIndex, startIndex + limit);
+
+          // Set next cursor if there are more articles
+          if (allArticles.length > startIndex + limit) {
+            nextCursor = String(startIndex + limit);
+          }
         }
       }
 
@@ -224,7 +367,10 @@ export const articleRouter = new Hono()
     async (c) => {
       const { articleId } = c.req.valid("param");
       const { userId } = c.req.valid("json");
-      console.info("Invoked articleRouter.post '/:articleId/read'", { articleId, userId });
+      console.info("Invoked articleRouter.post '/:articleId/read'", {
+        articleId,
+        userId,
+      });
 
       const [article, error] = await handleAsync(
         articleService.getArticleById(articleId)
@@ -252,7 +398,10 @@ export const articleRouter = new Hono()
     async (c) => {
       const { articleId } = c.req.valid("param");
       const { userId } = c.req.valid("json");
-      console.info("Invoked articleRouter.post '/:articleId/save'", { articleId, userId });
+      console.info("Invoked articleRouter.post '/:articleId/save'", {
+        articleId,
+        userId,
+      });
 
       const [article, error] = await handleAsync(
         articleService.getArticleById(articleId)
@@ -280,7 +429,10 @@ export const articleRouter = new Hono()
     async (c) => {
       const { articleId } = c.req.valid("param");
       const { userId } = c.req.valid("query");
-      console.info("Invoked articleRouter.delete '/:articleId/save'", { articleId, userId });
+      console.info("Invoked articleRouter.delete '/:articleId/save'", {
+        articleId,
+        userId,
+      });
 
       // TODO: Implement removal in saved articles service
       return c.json({ message: "Article removed from saved", articleId });

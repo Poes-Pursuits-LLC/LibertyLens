@@ -33,10 +33,10 @@ export default function FeedsIndex({ loaderData }: Route.ComponentProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-3xl font-bold text-gray-900">
             My Feeds
           </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-gray-600">
             Manage your custom news feeds and analysis preferences
           </p>
         </div>
@@ -59,10 +59,10 @@ export default function FeedsIndex({ loaderData }: Route.ComponentProps) {
       {feeds.length === 0 && (
         <Card className="p-12 text-center">
           <RssIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
             No feeds yet
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          <p className="text-sm text-gray-600 mb-4">
             Create your first feed to start receiving libertarian news analysis
           </p>
           <Link to="/dashboard/feeds/new">

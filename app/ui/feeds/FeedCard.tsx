@@ -42,15 +42,15 @@ export function FeedCard({ feed }: FeedCardProps) {
     <Card className={`p-6 hover:shadow-lg transition-shadow ${isDeleting ? 'opacity-60' : ''}`}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-            <RssIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <RssIcon className="h-6 w-6 text-blue-600" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold text-gray-900">
               {feed.name}
             </h3>
             {feed.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600">
                 {feed.description}
               </p>
             )}
@@ -61,16 +61,16 @@ export function FeedCard({ feed }: FeedCardProps) {
       {/* Feed Stats */}
       <div className="grid grid-cols-3 gap-4 mb-4">
         <div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Articles</p>
-          <p className="text-lg font-semibold text-gray-900 dark:text-white">0</p>
+          <p className="text-sm text-gray-600">Articles</p>
+          <p className="text-lg font-semibold text-gray-900">0</p>
         </div>
         <div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Sources</p>
-          <p className="text-lg font-semibold text-gray-900 dark:text-white">{feed.sources?.length ?? 0}</p>
+          <p className="text-sm text-gray-600">Sources</p>
+          <p className="text-lg font-semibold text-gray-900">{feed.sources?.length ?? 0}</p>
         </div>
         <div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Updated</p>
-          <p className="text-sm font-medium text-gray-900 dark:text-white">{feed.lastRefreshedAt || "—"}</p>
+          <p className="text-sm text-gray-600">Updated</p>
+          <p className="text-sm font-medium text-gray-900">{feed.lastRefreshedAt || "—"}</p>
         </div>
       </div>
 
@@ -81,7 +81,7 @@ export function FeedCard({ feed }: FeedCardProps) {
             {feed.topics.map((topic: string) => (
               <span
                 key={topic}
-                className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md"
+                className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-md"
               >
                 {topic}
               </span>
@@ -91,7 +91,7 @@ export function FeedCard({ feed }: FeedCardProps) {
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between pt-4 border-t border-gray-200">
         <Link to={`/dashboard/feeds/${feed.feedId}`}>
           <Button size="sm">
             <NewspaperIcon className="h-4 w-4 mr-2" />
@@ -105,7 +105,7 @@ export function FeedCard({ feed }: FeedCardProps) {
           <Button
             variant="ghost"
             size="sm"
-            className={`text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ${
+            className={`text-red-600 hover:text-red-700 ${
               isDeleting ? 'opacity-50 cursor-not-allowed' : ''
             }`}
             aria-label="Delete feed"

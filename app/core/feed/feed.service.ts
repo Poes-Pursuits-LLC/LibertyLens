@@ -10,7 +10,9 @@ import { defaultAnalysisSettings } from "./feed.model";
 
 const getFeedById = async (feedId: string) => {
   const cacheKey = `feed:${feedId}`;
-  const { data: cached } = await DynamoCache().get({ cacheKey, type: "feed" }).go();
+  const { data: cached } = await DynamoCache()
+    .get({ cacheKey, type: "feed" })
+    .go();
   if (cached?.cached) return cached.cached as FeedConfig;
 
   const { data: feed } = await DynamoFeed().get({ feedId, type: "feed" }).go();
@@ -30,22 +32,18 @@ const getFeedById = async (feedId: string) => {
 
 const getUserFeeds = async (userId: string, onlyActive = false) => {
   const cacheKey = `user-feeds:${userId}:${onlyActive ? "active" : "all"}`;
-  const { data: cached } = await DynamoCache().get({ cacheKey, type: "feed" }).go();
+  const { data: cached } = await DynamoCache()
+    .get({ cacheKey, type: "feed" })
+    .go();
   if (cached?.cached) return cached.cached as FeedConfig[];
 
   let feeds: FeedConfig[];
 
   if (onlyActive) {
-    // Use byUser GSI and filter for active feeds
-    const { data } = await DynamoFeed()
-      .query.byUser({ userId })
-      .go();
+    const { data } = await DynamoFeed().query.byUser({ userId }).go();
     feeds = (data as any).filter((f: any) => f.isActive);
   } else {
-    // Use byUser GSI for all feeds
-    const { data } = await DynamoFeed()
-      .query.byUser({ userId })
-      .go();
+    const { data } = await DynamoFeed().query.byUser({ userId }).go();
     feeds = data as any;
   }
 
@@ -61,10 +59,13 @@ const getUserFeeds = async (userId: string, onlyActive = false) => {
 };
 
 const createFeed = async (userId: string, input: CreateFeedInput) => {
-  // Map source IDs into full NewsSource objects; ignore any not found
-  const { newsSourceService } = await import("../news-source/news-source.service")
+  const { newsSourceService } = await import(
+    "../news-source/news-source.service"
+  );
   const resolvedSources = (
-    await Promise.all((input.sources || []).map((id) => newsSourceService.getNewsSourceById(id)))
+    await Promise.all(
+      (input.sources || []).map((id) => newsSourceService.getNewsSourceById(id))
+    )
   )
     .filter(Boolean)
     .map((s: any) => ({
@@ -73,7 +74,7 @@ const createFeed = async (userId: string, input: CreateFeedInput) => {
       url: s.url,
       type: s.type,
       enabled: true,
-    }))
+    }));
 
   const [feed, error] = await handleAsync(
     DynamoFeed()

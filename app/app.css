@@ -7,11 +7,8 @@
 
 html,
 body {
-  @apply bg-white dark:bg-gray-950;
-
-  @media (prefers-color-scheme: light) {
-    color-scheme: light;
-  }
+  @apply bg-white;
+  color-scheme: light;
 }
 
 /* Smooth scrolling */
@@ -21,7 +18,7 @@ html {
 
 /* Focus styles for accessibility */
 *:focus-visible {
-  @apply outline-2 outline-offset-2 outline-blue-600 dark:outline-blue-400;
+  @apply outline-2 outline-offset-2 outline-blue-600;
 }
 
 /* Custom gradient text utility */
@@ -82,7 +79,7 @@ html {
 
 /* --- Minimal theme tokens and global helpers --- */
 :root {
-  /* light defaults - clean and accessible */
+  /* light-only theme - clean and accessible */
   --accent: oklch(61% 0.18 263);
   --accent-contrast: oklch(98% 0.01 260);
   --surface: oklch(98% 0.01 260);
@@ -91,18 +88,6 @@ html {
   --muted: oklch(55% 0.02 260);
   --shadow-soft: 0 1px 1px color-mix(in oklab, black 10%, transparent), 0 2px 6px color-mix(in oklab, black 8%, transparent);
   --border: color-mix(in oklab, var(--text) 10%, transparent);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface: oklch(16% 0.02 260);
-    --surface-2: oklch(20% 0.02 260);
-    --text: oklch(96% 0.01 260);
-    --muted: oklch(70% 0.02 260);
-    --accent: oklch(70% 0.16 263);
-    --accent-contrast: oklch(12% 0.01 260);
-    --border: color-mix(in oklab, var(--text) 12%, transparent);
-  }
 }
 
 /* Subtle focus fallback (Tailwind rings preferred but ensure base) */

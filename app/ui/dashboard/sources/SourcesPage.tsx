@@ -6,9 +6,9 @@ import {
   useRevalidator,
 } from "react-router";
 import { NewsSourceList, CustomRSSForm } from "~/components/news-source";
+import { SourceAddToFeedModal } from "~/components/news-source/SourceAddToFeedModal";
 import { Card } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { AddToFeedModal } from "~/components/feeds/AddToFeedModal";
 import {
   PlusIcon,
   XMarkIcon,
@@ -136,7 +136,7 @@ export function SourcesPage(loaderData: Route.ComponentProps["loaderData"]) {
       )}
 
       {showAddToFeed && (
-        <AddToFeedModal
+        <SourceAddToFeedModal
           open
           onClose={() => setShowAddToFeed(false)}
           onSuccess={() => {
