@@ -1,9 +1,9 @@
-# Liberty Lens TODO List:
+# Liberty Lens - News Analysis Platform TODO List:
 
 1. ✅ Manually assess functionality of Landing Page (links, navigation, etc.)
 2. Refine pagination for Articles fetched for a feed. Seems like it spreads provided "limit" across a different call to each source (getArticlesBySource). Is there a way to model this better in the data or use an abstraction from electro to be more performant?
 3. Resolve why just 3 sources are getting counted as success in cron job runs for hydrating initial 8 sources of articles.
-4. set TTL for articles in general; maybe start with 30 days for all articles put in via the daily cron.
+4. set TTL for articles in general; maybe start with 7 days for all articles put in via the daily cron.
 5. add dynamo stream to start creating data sheet per user for the dashboard page (articles analyzed? read? time saved? etc.)
 6. Revise styling for Login page.
 7. Modify feed from feed card. enables adding/removing sources as desired.
